@@ -19,19 +19,21 @@ export default function Experience() {
     "https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/cybertruck/model.gltf"
   );
 
-  const [hovered, setHovered] = useState(false);
   const [toggled, setToggled] = useState(false);
   const [deviceType, setDeviceType] = useState("desktop");
   const [opacity, setOpacity] = useState(0);
   const initialCameraPosition = useRef(new Vector3(-2, 3, 5));
   const targetPosition = useRef(initialCameraPosition.current.clone());
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       if (width <= 768) {
         setDeviceType("mobile");
-        initialCameraPosition.current = new Vector3(-4, 3, 10);
+        initialCameraPosition.current = new Vector3(-2.5, 2, 10);
       } else if (width <= 1200) {
         setDeviceType("tablet");
         initialCameraPosition.current = new Vector3(-3, 3, 6);
@@ -67,22 +69,20 @@ export default function Experience() {
   useFrame((state) => {
     const currentPosition = state.camera.position;
     const zoomPositions = {
-      mobile: new Vector3(0, 1, 6),
+      mobile: new Vector3(0.55, 1, 5),
       tablet: new Vector3(0, 1, 5),
-      desktop: new Vector3(1, 1, 4),
+      desktop: new Vector3(1.5, 1, 4),
     };
     const zoomedPosition = zoomPositions[deviceType];
     const defaultPosition = initialCameraPosition.current;
-    const shouldZoom = hovered || toggled;
+    const shouldZoom = toggled;
     targetPosition.current.copy(shouldZoom ? zoomedPosition : defaultPosition);
     currentPosition.lerp(targetPosition.current, 0.05);
     state.camera.lookAt(0, 0, 0);
   });
 
   const handleInteraction = () => {
-    if (deviceType === "mobile" || deviceType === "tablet") {
-      setToggled(!toggled);
-    }
+    setToggled(!toggled);
   };
 
   return (
@@ -101,8 +101,6 @@ export default function Experience() {
           <primitive
             object={computer.scene}
             position-y={-1.2}
-            onPointerOver={() => deviceType === "desktop" && setHovered(true)}
-            onPointerOut={() => deviceType === "desktop" && setHovered(false)}
             onPointerDown={handleInteraction}
             style={{ opacity }}
           />
@@ -120,12 +118,18 @@ export default function Experience() {
             distanceFactor={1.17}
             position={[
               deviceType === "mobile"
-                ? -0.015
+                ? isSafari
+                  ? -0.01 // Adjusted for Safari
+                  : -0.015
                 : deviceType === "tablet"
-                ? -0.005
+                ? isSafari
+                  ? -0.01 // Adjusted for Safari
+                  : -0.005
                 : 0,
               deviceType === "mobile"
-                ? 0.53
+                ? isSafari
+                  ? 0.525 // Adjusted for Safari
+                  : 0.38
                 : deviceType === "tablet"
                 ? 0.35
                 : 0.35,
@@ -166,3 +170,4 @@ export default function Experience() {
     </>
   );
 }
+
