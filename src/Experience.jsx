@@ -10,8 +10,9 @@ import { useGLTF } from "@react-three/drei";
 import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
+import { gsap } from "gsap";
 
-export default function Experience() {
+export default function Experience(started) {
   const computer = useGLTF(
     "https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/macbook/model.gltf"
   );
@@ -25,15 +26,14 @@ export default function Experience() {
   const initialCameraPosition = useRef(new Vector3(-2, 3, 5));
   const targetPosition = useRef(initialCameraPosition.current.clone());
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-
+  const textRef = useRef();
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       if (width <= 768) {
         setDeviceType("mobile");
-        initialCameraPosition.current = new Vector3(-2.5, 2, 10);
+        initialCameraPosition.current = new Vector3(-2.5, 2, 9.6);
       } else if (width <= 1200) {
         setDeviceType("tablet");
         initialCameraPosition.current = new Vector3(-3, 3, 6);
@@ -50,28 +50,36 @@ export default function Experience() {
 
   useEffect(() => {
     let animationFrame;
-
     const fadeIn = () => {
       setOpacity((prev) => {
         if (prev < 1) {
           animationFrame = requestAnimationFrame(fadeIn);
-          return Math.min(prev + 0.01, 1); // Smaller increment for smoother fade-in
+          return Math.min(prev + 0.01, 1);
         }
         return prev;
       });
     };
-
     fadeIn();
-
     return () => cancelAnimationFrame(animationFrame);
+  }, []);
+
+  useEffect(() => {
+    if (textRef.current) {
+      textRef.current.position.set(0, 0, -1.8);
+      gsap.to(textRef.current.position, {
+        y: 1.5,
+        duration: 1,
+        ease: "power2.out",
+      });
+    }
   }, []);
 
   useFrame((state) => {
     const currentPosition = state.camera.position;
     const zoomPositions = {
-      mobile: new Vector3(0.55, 1, 5),
-      tablet: new Vector3(0, 1, 5),
-      desktop: new Vector3(1.5, 1, 4),
+      mobile: new Vector3(0.5, 1, 4.7),
+      tablet: new Vector3(0.3, -0.35, 2),
+      desktop: new Vector3(0.3, -0.4, 1.6),
     };
     const zoomedPosition = zoomPositions[deviceType];
     const defaultPosition = initialCameraPosition.current;
@@ -114,21 +122,22 @@ export default function Experience() {
           />
           <Html
             transform
+            zIndexRange={started ? [0, 0] : [-100, -100]}
             wrapperClass="htmlScreen"
             distanceFactor={1.17}
             position={[
               deviceType === "mobile"
                 ? isSafari
-                  ? -0.01 // Adjusted for Safari
+                  ? -0.01
                   : -0.015
                 : deviceType === "tablet"
                 ? isSafari
-                  ? -0.01 // Adjusted for Safari
+                  ? -0.01
                   : -0.005
                 : 0,
               deviceType === "mobile"
                 ? isSafari
-                  ? 0.525 // Adjusted for Safari
+                  ? 0.525
                   : 0.38
                 : deviceType === "tablet"
                 ? 0.35
@@ -154,11 +163,21 @@ export default function Experience() {
             position={[2, 0.55, 0.3]}
             rotation-y={-1.25}
             color={"#000"}
-            children={"Zexin\rZou"}
             textAlign="center"
             letterSpacing={0.05}
             style={{ opacity }}
-          />
+          >
+            Zexin{`\r`}Zou
+          </Text>
+          <Text
+            ref={textRef}
+            font="./bangers-v20-latin-regular.woff"
+            fontSize={0.1}
+            letterSpacing={0.05}
+            color={"#000"}
+          >
+            Toggle the Keyboard to Zoom in and out
+          </Text>
         </Float>
       </PresentationControls>
       <ContactShadows
@@ -170,4 +189,3 @@ export default function Experience() {
     </>
   );
 }
-
