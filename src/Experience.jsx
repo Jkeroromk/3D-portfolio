@@ -33,6 +33,9 @@ export default function Experience(started) {
   const [isMounted, setIsMounted] = useState(false);
   const [isInteracted, setIsInteracted] = useState(false);
   const [isSafariUser, setIsSafariUser] = useState(false);
+  const [shadowOpacity, setShadowOpacity] = useState(0);
+
+
 
   // Refs
   const initialCameraPosition = useRef(new Vector3(-2, 3, 5));
@@ -96,27 +99,59 @@ export default function Experience(started) {
   // Fade in effect
   useEffect(() => {
     if (!isMounted) return;
-
-    let animationFrame;
-    const fadeIn = () => {
+  
+    let objectAnimationFrame, shadowAnimationFrame;
+  
+    const fadeInObject = () => {
       setOpacity((prev) => {
         if (prev < 1) {
-          animationFrame = requestAnimationFrame(fadeIn);
-          return Math.min(prev + 0.01, 1);
+          objectAnimationFrame = requestAnimationFrame(fadeInObject);
+          return Math.min(prev + 0.0165, 1);
         }
         return prev;
       });
     };
-
-    const timer = setTimeout(() => {
-      fadeIn();
-    }, 100);
-
+  
+    const fadeInShadow = () => {
+      setShadowOpacity((prev) => {
+        if (prev < 0.4) {
+          shadowAnimationFrame = requestAnimationFrame(fadeInShadow);
+          return Math.min(prev + 0.008, 0.4);
+        }
+        return prev;
+      });
+    };
+  
+    const objectDelayTimer = setTimeout(() => {
+      fadeInObject();
+    }, 1000);
+  
+    const shadowDelayTimer = setTimeout(() => {
+      fadeInShadow();
+    }, 1300);
+  
     return () => {
-      cancelAnimationFrame(animationFrame);
-      clearTimeout(timer);
+      cancelAnimationFrame(objectAnimationFrame);
+      cancelAnimationFrame(shadowAnimationFrame);
+      clearTimeout(objectDelayTimer);
+      clearTimeout(shadowDelayTimer);
     };
   }, [isMounted]);
+
+  
+  
+  // HTML position based on device type and Safari check
+  const getHtmlPosition = () => {
+    if (isSafariUser) {
+      return [-0.015, 0.7, -1.4];
+    }
+
+    return [
+      deviceType === "mobile" ? -0.015 : deviceType === "tablet" ? -0.005 : 0,
+      deviceType === "mobile" ? 0.38 : 0.35,
+      -1.4,
+    ];
+  };
 
   // Camera animation
   useFrame((state) => {
@@ -135,36 +170,21 @@ export default function Experience(started) {
     }
   });
 
-  // HTML position based on device type and Safari check
-  const getHtmlPosition = () => {
-    if (isSafariUser) {
-      return [-0.015, 0.7, -1.4];
-    }
-
-    return [
-      deviceType === "mobile" ? -0.015 : deviceType === "tablet" ? -0.005 : 0,
-      deviceType === "mobile" ? 0.38 : 0.35,
-      -1.4,
-    ];
-  };
-
   return (
     <>
       <Environment preset="city" />
       <color args={["#c8c8c8"]} attach="background" />
 
       {/* Static Shadows */}
-      {isMounted && opacity === 1 && (
-        <group position={[0, 0, 0]} rotation={[0, 0, 0]}>
+      {isMounted && (
+        <group>
           <ContactShadows
             ref={shadowRef}
-            opacity={0.4}
-            scale={10}
+            opacity={shadowOpacity} // Use delayed shadow opacity
+            scale={5}
             blur={4}
-            far={10}
-            resolution={512}
-            color="#000000"
-            frames={1}
+            position={[0, -1.4, 0]}
+            far={4}
           />
         </group>
       )}
