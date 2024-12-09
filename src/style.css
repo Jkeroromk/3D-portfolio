@@ -243,7 +243,9 @@ html, body, #root {
   width: 100%;
 }
 
-
+.no-cursor{
+  cursor: not-allowed;
+}
 
 .animatedIcon {
   animation: bounce 2s infinite;

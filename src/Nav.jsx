@@ -39,8 +39,7 @@ export default function NavBar({ started, onSelectView }) {
           WorkPlace
         </li>
         <li
-          className="navbar__item link-hover-effect"
-          onClick={() => handleItemClick(2, "personal")}
+          className="navbar__item link-hover-effect no-cursor"
         >
           Personal
         </li>
