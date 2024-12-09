@@ -26,6 +26,12 @@ function App() {
 
     if (view !== "transition") {
       setView("transition");
+      
+      gsap.to("iframe", {
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.inOut",
+      });
 
       gsap.to(objectRef.current.scale, {
         x: 0,

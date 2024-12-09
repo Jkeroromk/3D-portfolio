@@ -67,7 +67,7 @@ export default function Experience(started) {
 
   useEffect(() => {
     if (textRef.current) {
-      textRef.current.position.set(0, 1.5, -1.8);
+      textRef.current.position.set(0, 1.6, -1.8);
     }
   }, []);
 
@@ -109,7 +109,7 @@ export default function Experience(started) {
 
     const objectDelayTimer = setTimeout(() => {
       fadeInObject();
-    }, 1000);
+    }, 1300);
 
     return () => {
       cancelAnimationFrame(objectAnimationFrame);
@@ -211,8 +211,11 @@ export default function Experience(started) {
             fontSize={0.1}
             letterSpacing={0.05}
             color={"#000"}
+            textAlign="center"
           >
             Toggle the Keyboard to Zoom in and out
+            {"\r"}
+            Scroll the Computer to View More ⬇️
           </Text>
         </Float>
       </PresentationControls>
