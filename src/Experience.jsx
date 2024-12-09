@@ -2,7 +2,6 @@ import {
   Environment,
   Float,
   PresentationControls,
-  ContactShadows,
   Html,
   Text,
 } from "@react-three/drei";
@@ -33,15 +32,11 @@ export default function Experience(started) {
   const [isMounted, setIsMounted] = useState(false);
   const [isInteracted, setIsInteracted] = useState(false);
   const [isSafariUser, setIsSafariUser] = useState(false);
-  const [shadowOpacity, setShadowOpacity] = useState(0);
-
-
 
   // Refs
   const initialCameraPosition = useRef(new Vector3(-2, 3, 5));
   const targetPosition = useRef(initialCameraPosition.current.clone());
   const textRef = useRef();
-  const shadowRef = useRef();
 
   // Device-specific positions
   const cameraPositions = {
@@ -99,47 +94,29 @@ export default function Experience(started) {
   // Fade in effect
   useEffect(() => {
     if (!isMounted) return;
-  
-    let objectAnimationFrame, shadowAnimationFrame;
-  
+
+    let objectAnimationFrame;
+
     const fadeInObject = () => {
       setOpacity((prev) => {
         if (prev < 1) {
           objectAnimationFrame = requestAnimationFrame(fadeInObject);
-          return Math.min(prev + 0.0165, 1);
+          return Math.min(prev + 0.008, 1);
         }
         return prev;
       });
     };
-  
-    const fadeInShadow = () => {
-      setShadowOpacity((prev) => {
-        if (prev < 0.4) {
-          shadowAnimationFrame = requestAnimationFrame(fadeInShadow);
-          return Math.min(prev + 0.008, 0.4);
-        }
-        return prev;
-      });
-    };
-  
+
     const objectDelayTimer = setTimeout(() => {
       fadeInObject();
     }, 1000);
-  
-    const shadowDelayTimer = setTimeout(() => {
-      fadeInShadow();
-    }, 1300);
-  
+
     return () => {
       cancelAnimationFrame(objectAnimationFrame);
-      cancelAnimationFrame(shadowAnimationFrame);
       clearTimeout(objectDelayTimer);
-      clearTimeout(shadowDelayTimer);
     };
   }, [isMounted]);
 
-  
-  
   // HTML position based on device type and Safari check
   const getHtmlPosition = () => {
     if (isSafariUser) {
@@ -162,32 +139,12 @@ export default function Experience(started) {
     targetPosition.current.copy(toggled ? zoomedPosition : defaultPosition);
     currentPosition.lerp(targetPosition.current, 0.05);
     state.camera.lookAt(0, 0, 0);
-
-    // Update shadow position based on the object's position
-    if (computer.scene && shadowRef.current) {
-      const objectPosition = computer.scene.position;
-      shadowRef.current.position.set(objectPosition.x, -1.4, objectPosition.z);
-    }
   });
 
   return (
     <>
       <Environment preset="city" />
       <color args={["#c8c8c8"]} attach="background" />
-
-      {/* Static Shadows */}
-      {isMounted && (
-        <group>
-          <ContactShadows
-            ref={shadowRef}
-            opacity={shadowOpacity} // Use delayed shadow opacity
-            scale={5}
-            blur={4}
-            position={[0, -1.4, 0]}
-            far={4}
-          />
-        </group>
-      )}
 
       {/* Main Scene Content */}
       <PresentationControls
