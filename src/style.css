@@ -169,7 +169,7 @@ html, body, #root {
 .navbar {
   position: fixed;
   top: 20px;
-  right: 50%;
+  right: 53.5%;
   transform: translateX(50%);
   z-index: 9999;
   opacity: 0;

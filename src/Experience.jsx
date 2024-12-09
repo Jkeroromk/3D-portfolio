@@ -10,7 +10,12 @@ import { useGLTF } from "@react-three/drei";
 import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Vector3 } from "three";
-import { gsap } from "gsap";
+
+// Safari detection utility function
+function isSafari() {
+  const ua = navigator.userAgent;
+  return /Safari/.test(ua) && !/Chrome/.test(ua);
+}
 
 export default function Experience(started) {
   // Load 3D models
@@ -27,34 +32,31 @@ export default function Experience(started) {
   const [opacity, setOpacity] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
   const [isInteracted, setIsInteracted] = useState(false);
-  const [shadowOpacity, setShadowOpacity] = useState(0);
+  const [isSafariUser, setIsSafariUser] = useState(false);
 
   // Refs
   const initialCameraPosition = useRef(new Vector3(-2, 3, 5));
   const targetPosition = useRef(initialCameraPosition.current.clone());
   const textRef = useRef();
-  const cleanupRef = useRef(null);
+  const shadowRef = useRef();
 
   // Device-specific positions
   const cameraPositions = {
     mobile: new Vector3(-2.5, 2, 9.6),
     tablet: new Vector3(-3, 3, 6),
-    desktop: new Vector3(-2, 3, 5)
+    desktop: new Vector3(-2, 3, 5),
   };
 
   const zoomPositions = {
     mobile: new Vector3(0.5, 1, 5),
     tablet: new Vector3(0.3, -0.35, 3),
-    desktop: new Vector3(0.3, -0.4, 2.3)
+    desktop: new Vector3(0.3, -0.4, 2.3),
   };
 
   // Mount effect with cleanup
   useEffect(() => {
     setIsMounted(true);
-    
-    if (cleanupRef.current) {
-      cleanupRef.current();
-    }
+    setIsSafariUser(isSafari()); // Set Safari check when mounted
 
     const cleanup = () => {
       setIsMounted(false);
@@ -62,23 +64,13 @@ export default function Experience(started) {
       setIsInteracted(false);
     };
 
-    cleanupRef.current = cleanup;
     return cleanup;
   }, []);
 
-  // Click handler for the entire scene
   useEffect(() => {
-    const handleClick = () => {
-      setIsInteracted(true);
-    };
-
-    window.addEventListener('click', handleClick);
-    window.addEventListener('touchstart', handleClick);
-
-    return () => {
-      window.removeEventListener('click', handleClick);
-      window.removeEventListener('touchstart', handleClick);
-    };
+    if (textRef.current) {
+      textRef.current.position.set(0, 1.5, -1.8);
+    }
   }, []);
 
   // Handle device type and resize
@@ -126,35 +118,35 @@ export default function Experience(started) {
     };
   }, [isMounted]);
 
-  // Text animation
-  useEffect(() => {
-    if (textRef.current) {
-      textRef.current.position.set(0, 0, -1.8);
-      gsap.to(textRef.current.position, {
-        y: 1.5,
-        duration: 1,
-        ease: "power2.out",
-      });
-    }
-  }, []);
-
   // Camera animation
   useFrame((state) => {
     const currentPosition = state.camera.position;
     const zoomedPosition = zoomPositions[deviceType];
     const defaultPosition = initialCameraPosition.current;
-    
+
     targetPosition.current.copy(toggled ? zoomedPosition : defaultPosition);
     currentPosition.lerp(targetPosition.current, 0.05);
     state.camera.lookAt(0, 0, 0);
+
+    // Update shadow position based on the object's position
+    if (computer.scene && shadowRef.current) {
+      const objectPosition = computer.scene.position;
+      shadowRef.current.position.set(objectPosition.x, -1.4, objectPosition.z);
+    }
   });
 
-  // HTML position based on device type
-  const getHtmlPosition = () => [
-    deviceType === "mobile" ? -0.015 : deviceType === "tablet" ? -0.005 : 0,
-    deviceType === "mobile" ? 0.38 : 0.35,
-    -1.4
-  ];
+  // HTML position based on device type and Safari check
+  const getHtmlPosition = () => {
+    if (isSafariUser) {
+      return [-0.015, 0.7, -1.4];
+    }
+
+    return [
+      deviceType === "mobile" ? -0.015 : deviceType === "tablet" ? -0.005 : 0,
+      deviceType === "mobile" ? 0.38 : 0.35,
+      -1.4,
+    ];
+  };
 
   return (
     <>
@@ -162,18 +154,17 @@ export default function Experience(started) {
       <color args={["#c8c8c8"]} attach="background" />
 
       {/* Static Shadows */}
-      {isMounted && isInteracted && (
+      {isMounted && opacity === 1 && (
         <group position={[0, 0, 0]} rotation={[0, 0, 0]}>
           <ContactShadows
-            position={[0, -1.4, 0]}
+            ref={shadowRef}
             opacity={0.4}
             scale={10}
-            blur={2}
-            far={4}
-            resolution={256}
+            blur={4}
+            far={10}
+            resolution={512}
             color="#000000"
             frames={1}
-            rotation={[Math.PI / 2, 0, 0]}
           />
         </group>
       )}
@@ -182,8 +173,8 @@ export default function Experience(started) {
       <PresentationControls
         global
         rotation={[0.13, 0.1, 0]}
-        polar={[-0.4, 0.2]}
-        azimuth={[-1, 0.75]}
+        polar={[-0.4, 0.1]}
+        azimuth={[-0.75, 0.75]}
         config={{ mass: 2, tension: 300 }}
         snap={{ mass: 4, tension: 300 }}
       >
@@ -194,7 +185,6 @@ export default function Experience(started) {
             position-y={-1.2}
             onPointerDown={() => {
               setToggled(!toggled);
-              setIsInteracted(true);
             }}
             castShadow
             style={{ opacity }}
