@@ -12,6 +12,7 @@ import { Vector3 } from "three";
 
 export default function WorkPlaceScene(){
     return (
+      <PresentationControls>
       <mesh>
         <boxGeometry args={[1,1,1]} />
         <meshStandardMaterial color="orange" transparent={true} opacity={1}  />
@@ -26,6 +27,7 @@ export default function WorkPlaceScene(){
           To be Wokring on 
         </Text>
       </mesh>
+      </PresentationControls>
     );
   }
   

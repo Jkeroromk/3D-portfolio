@@ -16,7 +16,7 @@ function isSafari() {
   return /Safari/.test(ua) && !/Chrome/.test(ua);
 }
 
-export default function Experience(started) {
+export default function Experience({ started, onToggleNav }) {
   // Load 3D models
   const computer = useGLTF(
     "https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/macbook/model.gltf"
@@ -30,7 +30,6 @@ export default function Experience(started) {
   const [deviceType, setDeviceType] = useState("desktop");
   const [opacity, setOpacity] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
-  const [isInteracted, setIsInteracted] = useState(false);
   const [isSafariUser, setIsSafariUser] = useState(false);
 
   // Refs
@@ -48,18 +47,17 @@ export default function Experience(started) {
   const zoomPositions = {
     mobile: new Vector3(0.5, 1, 5),
     tablet: new Vector3(0.3, -0.35, 3),
-    desktop: new Vector3(0.3, -0.4, 2.3),
+    desktop: new Vector3(0.3, 0, 3.3),
   };
 
   // Mount effect with cleanup
   useEffect(() => {
     setIsMounted(true);
-    setIsSafariUser(isSafari()); // Set Safari check when mounted
+    setIsSafariUser(isSafari());
 
     const cleanup = () => {
       setIsMounted(false);
       setOpacity(0);
-      setIsInteracted(false);
     };
 
     return cleanup;
@@ -141,6 +139,12 @@ export default function Experience(started) {
     state.camera.lookAt(0, 0, 0);
   });
 
+  // Handle zoom toggle
+  const handleToggleZoom = () => {
+    setToggled(!toggled);
+    onToggleNav && onToggleNav(toggled); // Nav should be hidden when toggled is true (zoomed in)
+  };
+
   return (
     <>
       <Environment preset="city" />
@@ -160,9 +164,7 @@ export default function Experience(started) {
           <primitive
             object={computer.scene}
             position-y={-1.2}
-            onPointerDown={() => {
-              setToggled(!toggled);
-            }}
+            onPointerDown={handleToggleZoom}
             castShadow
             style={{ opacity }}
           />
