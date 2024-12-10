@@ -223,6 +223,12 @@ html, body, #root {
   }
 }
 
+@media (max-width:768px) {
+  .navbar{
+    left: 47%;
+  }
+}
+
 .link-hover-effect {
   position: relative;
 }

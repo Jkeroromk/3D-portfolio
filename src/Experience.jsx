@@ -47,7 +47,7 @@ export default function Experience({ started, onToggleNav }) {
   const zoomPositions = {
     mobile: new Vector3(0.5, 1, 5),
     tablet: new Vector3(0.3, -0.35, 3),
-    desktop: new Vector3(0.3, 0, 3.3),
+    desktop: new Vector3(0.3, -0.2, 2.8),
   };
 
   // Mount effect with cleanup
@@ -160,65 +160,75 @@ export default function Experience({ started, onToggleNav }) {
         snap={{ mass: 4, tension: 300 }}
       >
         <Float rotationIntensity={0.2}>
-          {/* Computer Model */}
-          <primitive
-            object={computer.scene}
-            position-y={-1.2}
-            onPointerDown={handleToggleZoom}
-            castShadow
-            style={{ opacity }}
-          />
-
-          {/* Car Model */}
-          <primitive
-            object={sportcar.scene}
-            scale={0.3}
-            position-y={-0.8}
-            position-x={2}
-            position-z={0}
-            castShadow
-            style={{ opacity }}
-          />
-
-          {/* Iframe Content */}
-          <Html
-            transform
-            zIndexRange={started ? [0, 0] : [-100, -100]}
-            wrapperClass="htmlScreen"
-            distanceFactor={1.17}
-            position={getHtmlPosition()}
-            rotation-x={-0.256}
-            style={{ opacity }}
+          <group
+            position={
+              deviceType === "mobile"
+                ? [-0.25, 0, 0]
+                : deviceType === "tablet"
+                ? [0, 0, 0]
+                : [0, 0, 0]
+            }
           >
-            <iframe src="https://jkeroromk.github.io/Advance-portfolio/" />
-          </Html>
+            {/* Computer Model */}
+            <primitive
+              object={computer.scene}
+              position-y={-1.2}
+              onPointerDown={handleToggleZoom}
+              castShadow
+              style={{ opacity }}
+            />
 
-          {/* Text Elements */}
-          <Text
-            font="./bangers-v20-latin-regular.woff"
-            fontSize={0.5}
-            position={[2, 0.55, 0.3]}
-            rotation-y={-1.25}
-            color={"#000"}
-            textAlign="center"
-            letterSpacing={0.05}
-            style={{ opacity }}
-          >
-            Zexin{"\r"}Zou
-          </Text>
+            {/* Car Model */}
+            <primitive
+              object={sportcar.scene}
+              scale={0.3}
+              position-y={-0.8}
+              position-x={2}
+              position-z={0}
+              castShadow
+              style={{ opacity }}
+            />
 
-          <Text
-            ref={textRef}
-            font="./bangers-v20-latin-regular.woff"
-            fontSize={0.1}
-            letterSpacing={0.05}
-            color={"#000"}
-            textAlign="center"
-          >
-            Toggle the Keyboard to Zoom in and out
-            {"\r"}
-            Scroll the Computer to View More ⬇️
-          </Text>
+            {/* Iframe Content */}
+            <Html
+              transform
+              zIndexRange={[0, 0]}
+              wrapperClass="htmlScreen"
+              distanceFactor={1.17}
+              position={getHtmlPosition()}
+              rotation-x={-0.256}
+              style={{ opacity }}
+            >
+              <iframe src="https://jkeroromk.github.io/Advance-portfolio/" />
+            </Html>
+
+            {/* Text Elements */}
+            <Text
+              font="./bangers-v20-latin-regular.woff"
+              fontSize={0.5}
+              position={[2, 0.55, 0.3]}
+              rotation-y={-1.25}
+              color={"#000"}
+              textAlign="center"
+              letterSpacing={0.05}
+              style={{ opacity }}
+            >
+              Zexin{"\r"}Zou
+            </Text>
+
+            <Text
+              ref={textRef}
+              font="./bangers-v20-latin-regular.woff"
+              fontSize={0.1}
+              letterSpacing={0.05}
+              color={"#000"}
+              textAlign="center"
+            >
+              Toggle the Keyboard to Zoom in and out
+              {"\r"}
+              Scroll the Computer to View More ⬇️
+            </Text>
+          </group>
         </Float>
       </PresentationControls>
     </>

@@ -12,11 +12,11 @@ import { gsap } from "gsap";
 const root = ReactDOM.createRoot(document.querySelector("#root"));
 
 function App() {
-  const [started, setStarted] = useState(true);
+  const [started, setStarted] = useState(false);
   const [isNavVisible, setIsNavVisible] = useState(true); // Make sure this is initialized properly
   const [view, setView] = useState("default");
   const [currentContent, setCurrentContent] = useState(
-    <Experience started={started} onToggleNav={() => {}} />
+    <Experience started={started} onToggleNav={setIsNavVisible} />
   );
   const objectRef = useRef();
 
@@ -26,6 +26,12 @@ function App() {
     if (view === newView) return;
 
     setView("transition");
+
+    gsap.to('iframe',{
+      opacity:0,
+      duration:0.5,
+      ease:"power2.inOut",
+    })
 
     gsap.to(objectRef.current.scale, {
       x: 0,
