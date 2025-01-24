@@ -24,7 +24,7 @@ export default function WorkPlaceScene(){
          textAlign="center"
          letterSpacing={0.05}
          >
-          To be Wokring on 
+          To be Working on 
         </Text>
       </mesh>
       </PresentationControls>
