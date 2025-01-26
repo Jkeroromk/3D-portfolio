@@ -199,7 +199,7 @@ export default function Experience({ started, onToggleNav }) {
               rotation-x={-0.256}
               style={{ opacity }}
             >
-              <iframe src="https://jkeroro-website.vercel.app/" />
+              <iframe src="https://jkeroro.com" />
             </Html>
 
             {/* Text Elements */}
