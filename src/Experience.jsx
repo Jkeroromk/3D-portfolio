@@ -16,14 +16,12 @@ function isSafari() {
   return /Safari/.test(ua) && !/Chrome/.test(ua);
 }
 
-export default function Experience({ started, onToggleNav }) {
+useGLTF.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+
+export default function Experience({ onToggleNav }) {
   // Load 3D models
-  const computer = useGLTF(
-    "https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/macbook/model.gltf"
-  );
-  const sportcar = useGLTF(
-    "https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/cybertruck/model.gltf"
-  );
+  const computer = useGLTF("/models/macbook/model.gltf");
+  const sportcar = useGLTF("/models/cybertruck/model.gltf");
 
   // State management
   const [toggled, setToggled] = useState(false);
