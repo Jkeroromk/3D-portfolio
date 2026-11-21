@@ -7,7 +7,9 @@ import {
   Color,
   DoubleSide,
   Group,
+  ImageBitmapLoader,
   LoadingManager,
+  Texture,
   Mesh,
   MeshBasicMaterial,
   Quaternion,
@@ -369,11 +371,23 @@ function Room({ manifest, onHotspot }) {
     }
     if (!wantNight || room.nightLoading) return;
     room.nightLoading = true;
-    const loader = new TextureLoader(lateManager);
+    // ImageBitmapLoader decodes the JPGs off the main thread (TextureLoader
+    // decodes on upload, which stalls a frame for every 4K texture)
+    const loader = new ImageBitmapLoader(lateManager);
+    loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" });
     const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
     const load = (url) =>
       new Promise((res) =>
-        loader.load(ROOM_BASE + url, (t) => res(prepTexture(t, 4)), undefined, () => res(null))
+        loader.load(
+          ROOM_BASE + url,
+          (bmp) => {
+            const t = new Texture(bmp);
+            t.needsUpdate = true;
+            res(prepTexture(t, 4));
+          },
+          undefined,
+          () => res(null)
+        )
       );
     const upload = async (t) => {
       if (!t) return null;
@@ -548,7 +562,11 @@ function introPose(aspect, pullBack) {
 
 export default function BakedRoomScene({ onEnterMacbook }) {
   const manifest = useManifest();
-  const { camera, size } = useThree();
+  const { camera, size, scene } = useThree();
+  // the MacBook scene paints a grey background; the room shows the page behind it
+  useEffect(() => {
+    scene.background = null;
+  }, [scene]);
   const controls = useRef();
   const { started, focus } = useRoomState();
   const tween = useRef(null);
