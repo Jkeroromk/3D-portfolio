@@ -1,12 +1,15 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 
-// FPS / frame-time readout. On by default on Vercel previews and with ?perf;
+// FPS / frame-time readout. On by default on Vercel preview deployments and with ?perf;
 // toggle with the ` key. Every 2 s it also logs a [perf] line to the console.
 export function perfEnabledByDefault() {
   const q = new URLSearchParams(window.location.search);
   if (q.has("perf")) return q.get("perf") !== "0";
-  return /vercel\.app$/.test(window.location.hostname) || window.location.hostname === "localhost";
+  // previews live on <project>-<hash|git-branch>-jkeroromks-projects.vercel.app;
+  // the production domain doesn't, so the readout stays hidden there
+  const host = window.location.hostname;
+  return /-projects\.vercel\.app$/.test(host) || host === "localhost";
 }
 
 export default function PerfStats() {
