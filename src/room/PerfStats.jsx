@@ -34,6 +34,8 @@ function phaseTracker(gl) {
             p95: +sorted[Math.floor(sorted.length * 0.95)].toFixed(1),
             worst: +sorted[sorted.length - 1].toFixed(1),
             over25: t.times.filter((x) => x > 25).length,
+            late: renderFlags.paced && renderFlags.capFps ? t.times.filter((x) => x > (1250 / renderFlags.capFps)).length : undefined,
+            gpu: renderFlags.gpuMs != null ? +renderFlags.gpuMs.toFixed(1) : undefined,
           })
         );
       }
@@ -81,10 +83,15 @@ export default function PerfStats() {
     const now = performance.now();
     const st = s.current;
     if (!track.current) track.current = phaseTracker(gl);
-    track.current(now - st.last);
-    st.times.push(now - st.last);
+    // the room renderer may skip refreshes to keep an even beat: count the
+    // frames it actually drew; elsewhere every tick is a frame
+    const drawn = renderFlags.paced ? renderFlags.rendered.splice(0) : [now - st.last];
     st.last = now;
-    st.frames++;
+    for (const ms of drawn) {
+      track.current(ms);
+      st.times.push(ms);
+      st.frames++;
+    }
     const elapsed = now - st.t0;
     if (elapsed < 500) return;
     const fps = (st.frames * 1000) / elapsed;
@@ -104,11 +111,14 @@ export default function PerfStats() {
       geometries: info.memory.geometries,
       dpr: +dpr.toFixed(2),
       px: size ? `${size.width}x${size.height}` : "",
+      gpuMs: renderFlags.paced && renderFlags.gpuMs != null ? +renderFlags.gpuMs.toFixed(1) : undefined,
+      cap: renderFlags.paced ? renderFlags.capFps : undefined,
     };
     if (el.current && el.current.style.display !== "none") {
       el.current.textContent =
         `${line.fps} fps  ·  p95 ${line.p95ms} ms  ·  worst ${line.worstMs} ms\n` +
-        `${line.calls} calls  ·  ${(line.tris / 1e6).toFixed(2)}M tris  ·  ${line.textures} tex  ·  ${line.px} @${line.dpr}x`;
+        `${line.calls} calls  ·  ${(line.tris / 1e6).toFixed(2)}M tris  ·  ${line.textures} tex  ·  ${line.px} @${line.dpr}x` +
+        (line.cap ? `\ngpu ${line.gpuMs ?? "-"} ms  ·  paced at ${line.cap} fps` : "");
     }
     if (now - st.logT > 2000) {
       console.log("[perf]", JSON.stringify(line));

@@ -134,6 +134,7 @@ live.intro = { day: 0, base: 0, layers: LAYER_NAMES.map(() => 0) };
 let goal = target("day");
 export function setPresetTarget(key) {
   goal = target(key);
+  live.changedAt = performance.now(); // the fade takes ~1.5 s
 }
 
 const lerp = (a, b, k) => a + (b - a) * k;

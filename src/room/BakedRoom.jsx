@@ -26,7 +26,7 @@ import { MOBILE } from "./device.js";
 import RoomWorld, { REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
 import WaterLife from "./WaterLife.jsx";
 import RoomRenderer from "./RoomRenderer.jsx";
-import { renderFlags } from "./renderFlags.js";
+import { renderFlags, REVEAL } from "./renderFlags.js";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
 import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js";
 
@@ -128,7 +128,6 @@ const vertex = /* glsl */ `
 
 // First appearance: a scan line sweeps up from the floor and "prints" the
 // room. Every room material shares these two uniforms.
-const REVEAL = { value: 10 }; // world height below which the room is visible
 const REVEAL_EDGE = { value: new Vector3() }; // scan-line colour (preset accent)
 const REVEAL_FROM = WATER_Y - 0.05; // start at the waterline so the plinth prints too
 const REVEAL_TO = FLOOR_Y + 2.9;
@@ -637,7 +636,7 @@ function Room({ manifest, onHotspot }) {
     const I = live.intro;
 
     if (room.warm && room.revealT < REVEAL_TIME) room.revealT = Math.min(REVEAL_TIME, room.revealT + dt);
-    renderFlags.revealing = room.revealT < REVEAL_TIME;
+    renderFlags.revealing = room.warm && room.revealT < REVEAL_TIME;
     const rk = room.revealT / REVEAL_TIME;
     const re = rk < 0.5 ? 4 * rk * rk * rk : 1 - Math.pow(-2 * rk + 2, 3) / 2;
     REVEAL.value = rk >= 1 ? 10 : REVEAL_FROM + (REVEAL_TO - REVEAL_FROM) * re;
@@ -946,7 +945,15 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (ctl) ctl.target.copy(hold.current.target);
     }
     if (ctl) ctl.enabled = !tween.current && !st.focus && st.started;
-    renderFlags.phase = renderFlags.revealing ? "print" : tween.current ? tween.current.label : st.focus ? "focused" : "idle";
+    renderFlags.phase = !st.ready
+      ? "loading"
+      : renderFlags.revealing
+      ? "print"
+      : tween.current
+      ? tween.current.label
+      : st.focus
+      ? "focused"
+      : "idle";
 
     // intro lights: day fades in; at night each layer switches on in turn
     const I = live.intro;
