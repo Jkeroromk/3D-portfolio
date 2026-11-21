@@ -1,8 +1,18 @@
 import { useSyncExternalStore } from "react";
+import { defaultPreset } from "./lighting.js";
 
 // Tiny shared store so the HTML overlay (outside the canvas) and the 3D room
 // (inside the canvas) agree on day/night and on whether the credits are open.
-let state = { night: false, credits: false, ready: false, loadingNight: false };
+let state = {
+  preset: defaultPreset(),
+  started: false,
+  ready: false,
+  loadingNight: false,
+  credits: false,
+  focus: null,
+  hover: null,
+  introPlayed: false,
+};
 const listeners = new Set();
 
 export function setRoomState(patch) {

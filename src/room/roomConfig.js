@@ -4,13 +4,48 @@
 
 export const ROOM_BASE = "./models/room/";
 
-// Objects that open a link when clicked. `url: null` means "not decided yet":
-// the object is still shown, but it is not clickable.
-export const LINKS = {
-  Hit_G9: { label: "KeroCam", url: "https://kerocam.jkeroro.com" },
-  Hit_Logo: { label: "Jkeroro", url: null },
-  Hit_Couple: { label: "Us", url: null },
-  Hit_Doudou: { label: "Doudou", url: null },
+// Things you can click in the room. Their boxes come from the Blender export
+// (manifest.hotspots); this holds what happens and what the card says.
+// view: direction (three.js space) the camera looks at the object from.
+export const HOTSPOTS = {
+  G9: {
+    label: "KeroCam",
+    title: "KeroCam",
+    body: "My own game-highlight recorder. It clips the best moments of a match automatically, no OBS needed.",
+    link: { text: "Open KeroCam", url: "https://kerocam.jkeroro.com" },
+    view: [-1, 0.3, 0.15],
+  },
+  Vert: {
+    label: "Code",
+    title: "What I'm building",
+    body: "This room, for a start: modelled and lit in Blender, baked, and running in React Three Fiber.",
+    link: { text: "GitHub", url: "https://github.com/Jkeroromk" },
+    view: [-1, 0.2, 0.35],
+  },
+  MacBook: { label: "Enter my website", action: "macbook", view: [-1, 0.25, 0.1], distance: 0.55 },
+  PC: {
+    label: "The build",
+    title: "The build",
+    body: "Lian Li O11D EVO · AORUS RTX 5070 Ti · Corsair H150i · Lian Li SL120 fans, all white cables.",
+    view: [-0.25, 0.3, 1],
+  },
+  StreamDeck: { label: "Lighting", action: "lights" },
+  Nanoleaf: { label: "Change the mood", action: "cycle" },
+  Quest: {
+    label: "VR",
+    title: "VR & 3D",
+    body: "Quest 2, where most of my 3D and XR experiments start.",
+    view: [-0.35, 1.3, 0.8],
+  },
+  Lego: {
+    label: "LEGO",
+    title: "Off the clock",
+    body: "LEGO Technic 42042 crawler crane. Built it, still standing.",
+    view: [-0.2, 0.3, 1],
+  },
+  Logo: { label: "Jkeroro", title: "Jkeroro", body: "That's me: cybersecurity student and front-end developer.", view: [0, 0.05, 1] },
+  Couple: { label: "Us", title: "Us", body: "Photo coming soon.", view: [0, 0.05, 1] },
+  Doudou: { label: "Doudou", title: "Doudou", body: "Our Bichon. Photo coming soon.", view: [0, 0.05, 1] },
 };
 
 // Free models used in the room. All CC BY 4.0 from Sketchfab.

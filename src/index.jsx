@@ -1,112 +1,86 @@
 import "./style.css";
 import ReactDOM from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
+import { useGLTF } from "@react-three/drei";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Experience from "./Experience.jsx";
-import WorkPlaceScene from "./room/BakedRoom.jsx";
+import RoomScene from "./room/BakedRoom.jsx";
 import RoomOverlay from "./room/RoomOverlay.jsx";
 import Shadow from "./Components/Shadow.jsx";
-import { Suspense, useState, useRef } from "react";
-import { LoadingScreen } from "./LoadingScreen.jsx";
-import NavBar from "./Nav.jsx";
-import { gsap } from "gsap";
+import { setRoomState, useRoomState } from "./room/roomStore.js";
 
 const root = ReactDOM.createRoot(document.querySelector("#root"));
 
+const FADE_MS = 650;
+
+// The room is the home page. Clicking the MacBook in the room flies the camera
+// into its screen, fades, and opens the MacBook scene; "Back to my room" returns.
 function App() {
-  const [started, setStarted] = useState(false);
-  const [isNavVisible, setIsNavVisible] = useState(true); // Make sure this is initialized properly
-  const [view, setView] = useState("default");
-  const [contentView, setContentView] = useState("default");
-  const [currentContent, setCurrentContent] = useState(
-    <Experience started={started} onToggleNav={setIsNavVisible} />
-  );
-  const objectRef = useRef();
+  const [mode, setMode] = useState("room"); // "room" | "macbook"
+  const [fading, setFading] = useState(false);
+  const [macZoomed, setMacZoomed] = useState(false);
+  const busy = useRef(false);
+  const { ready } = useRoomState();
 
-  const handleStart = () => setStarted(true);
+  // Load the MacBook scene in the background once the room is up, so the jump is instant
+  useEffect(() => {
+    if (!ready) return;
+    useGLTF.preload("/models/macbook/model.gltf");
+    useGLTF.preload("/models/cybertruck/model.gltf");
+  }, [ready]);
 
-  const handleViewChange = (newView) => {
-    if (view === newView) return;
-
-    setView("transition");
-
-    gsap.to('iframe',{
-      opacity:0,
-      duration:0.5,
-      ease:"power2.inOut",
-    })
-
-    gsap.to(objectRef.current.scale, {
-      x: 0,
-      y: 0,
-      z: 0,
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
-    gsap.to(objectRef.current.rotation, {
-      y: objectRef.current.rotation.y + Math.PI * 2,
-      duration: 1.5,
-      ease: "power2.inOut",
-    });
-    gsap.to(objectRef.current.material, {
-      opacity: 0,
-      duration: 1.5,
-      ease: "power2.inOut",
-      onComplete: () => {
-        setContentView(newView);
-        setCurrentContent(
-          newView === "workplace" ? (
-            <WorkPlaceScene />
-          ) : (
-            <Experience started={started} onToggleNav={setIsNavVisible} />
-          )
-        );
-
-        gsap.fromTo(
-          objectRef.current.scale,
-          { x: 0, y: 0, z: 0 },
-          { x: 1, y: 1, z: 1, duration: 1.5, ease: "power2.inOut" }
-        );
-        gsap.fromTo(
-          objectRef.current.rotation,
-          { y: objectRef.current.rotation.y },
-          {
-            y: objectRef.current.rotation.y + Math.PI * 2,
-            duration: 1.5,
-            ease: "power2.inOut",
-          }
-        );
-        gsap.to(objectRef.current.material, {
-          opacity: 1,
-          duration: 1.5,
-          ease: "power2.inOut",
-          onComplete: () => setView(newView),
-        });
-      },
-    });
+  const switchTo = (next) => {
+    if (busy.current) return;
+    busy.current = true;
+    setFading(true);
+    setTimeout(() => {
+      setMode(next);
+      setMacZoomed(false);
+      document.documentElement.dataset.mode = next;
+      // give the new scene a frame to mount before fading back in
+      setTimeout(() => {
+        setFading(false);
+        busy.current = false;
+      }, 120);
+    }, FADE_MS);
   };
+
+  useEffect(() => {
+    document.documentElement.dataset.mode = "room";
+  }, []);
 
   return (
     <>
-      {!started && <LoadingScreen started={started} onStarted={handleStart} />}
-      {started && isNavVisible && <NavBar started={started} onSelectView={handleViewChange} />}
-      {contentView === "workplace" && <RoomOverlay />}
+      {mode === "room" && <RoomOverlay />}
+      {mode === "macbook" && !macZoomed && (
+        <button
+          className="back-to-room"
+          onClick={() => {
+            setRoomState({ focus: null });
+            switchTo("room");
+          }}
+        >
+          ← Back to my room
+        </button>
+      )}
+      <div className={`scene-fade ${fading ? "scene-fade--on" : ""}`} />
       <Canvas
         className="r3f"
-        style={{ opacity: 1 }}
+        gl={{ alpha: true, antialias: true }}
+        dpr={[1, 2]}
         camera={{ fov: 45, near: 0.1, far: 2000, position: [-3, 1.5, 4] }}
-        shadows
+        shadows={mode === "macbook"}
       >
         <Suspense fallback={null}>
-          <group ref={objectRef}>
-            {currentContent}
-          </group>
-          <Shadow
-            opacity={0.7}
-            position={[0, -1.4, 0]}
-            scale={12}
-            blur={3}
-            far={6}
-          />
+          {mode === "room" ? (
+            <RoomScene onEnterMacbook={() => switchTo("macbook")} />
+          ) : (
+            <>
+              {/* Experience's onToggleNav reports whether its chrome may show (false when zoomed into the screen) */}
+              <Experience onToggleNav={(visible) => setMacZoomed(!visible)} />
+              <Shadow opacity={0.7} position={[0, -1.4, 0]} scale={12} blur={3} far={6} />
+            </>
+          )}
         </Suspense>
       </Canvas>
     </>
