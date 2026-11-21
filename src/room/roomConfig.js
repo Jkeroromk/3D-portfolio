@@ -9,6 +9,7 @@ export const ROOM_BASE = "./models/room/";
 // view: direction (three.js space) the camera looks at the object from.
 export const HOTSPOTS = {
   G9: {
+    groups: ["Desk", "Speakers"],
     label: "KeroCam",
     title: "KeroCam",
     body: "My own game-highlight recorder. It clips the best moments of a match automatically, no OBS needed.",
@@ -16,6 +17,7 @@ export const HOTSPOTS = {
     view: [-1, 0.3, 0.15],
   },
   Vert: {
+    groups: ["Desk", "PC", "Speakers"],
     label: "GitHub",
     title: "GitHub",
     body: "Where everything I build lives: KeroCam, Lock, jkeroro.com and this room.",
@@ -23,8 +25,9 @@ export const HOTSPOTS = {
     view: [-1, 0.2, 0.35],
     shift: 0.12,
   },
-  MacBook: { label: "Enter my website", action: "macbook", view: [-1, 0.25, 0.1], distance: 0.55 },
+  MacBook: { groups: ["Desk"], label: "Enter my website", action: "macbook", view: [-1, 0.25, 0.1], distance: 0.55 },
   PC: {
+    groups: ["PC", "Desk"],
     label: "The build",
     title: "The build",
     body: "Lian Li O11D EVO · AORUS RTX 5070 Ti · Corsair H150i · Lian Li SL120 fans, all white cables.",
@@ -33,20 +36,29 @@ export const HOTSPOTS = {
   StreamDeck: { label: "Lighting", action: "lights" },
   Nanoleaf: { label: "Change the mood", action: "cycle" },
   Quest: {
+    groups: ["Quest", "Sofa", "Decor"],
     label: "VR",
     title: "VR & 3D",
     body: "Quest 2, where most of my 3D and XR experiments start.",
     view: [-0.35, 1.3, 0.8],
   },
   Lego: {
+    groups: ["Lego", "Shelf"],
     label: "LEGO",
     title: "Off the clock",
     body: "LEGO Technic 42042 crawler crane. Built it, still standing.",
     view: [-0.2, 0.3, 1],
   },
-  Logo: { label: "Jkeroro", title: "Jkeroro", body: "That's me: cybersecurity student and front-end developer.", view: [0, 0.05, 1] },
-  Couple: { label: "Us", title: "Us", body: "Photo coming soon.", view: [0, 0.05, 1] },
-  Doudou: { label: "Doudou", title: "Doudou", body: "Our Bichon. Photo coming soon.", view: [0, 0.05, 1] },
+  Logo: {
+    groups: ["Decor", "Room"],
+    label: "jkeroro.com",
+    title: "Jkeroro",
+    body: "That's me: cybersecurity student and front-end developer. My personal site has my projects, music and more.",
+    link: { text: "Visit jkeroro.com", url: "https://jkeroro.com" },
+    view: [0, 0.05, 1],
+  },
+  Couple: { groups: ["Decor", "Room"], label: "Us", title: "Us", body: "Photo coming soon.", view: [0, 0.05, 1] },
+  Doudou: { groups: ["Decor", "Room"], label: "Doudou", title: "Doudou", body: "Our Bichon. Photo coming soon.", view: [0, 0.05, 1] },
 };
 
 // Free models used in the room. All CC BY 4.0 from Sketchfab.

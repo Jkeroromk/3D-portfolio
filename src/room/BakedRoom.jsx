@@ -51,6 +51,63 @@ const CONTRAST = 0.55;
 // landing progress bar (drei useProgress) only counts what the first view needs.
 const lateManager = new LoadingManager();
 
+// Phones get half-resolution textures (4K -> 2K); when the visitor focuses on
+// something, just that group swaps to full resolution until they leave.
+const MOBILE = (() => {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    if (q.has("tier")) return q.get("tier") === "mobile";
+    const small = Math.min(window.screen.width, window.screen.height) <= 820;
+    return /iPhone|iPod|Android.+Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && small);
+  } catch {
+    return false;
+  }
+})();
+const pick = (full, mobile) => (MOBILE && mobile) || full;
+
+// ImageBitmapLoader decodes JPGs off the main thread (TextureLoader decodes on
+// upload, which stalls a frame for every 4K texture)
+const bitmapLoader = new ImageBitmapLoader(lateManager);
+bitmapLoader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" });
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+function loadBitmapTexture(url, anisotropy) {
+  return new Promise((res) =>
+    bitmapLoader.load(
+      ROOM_BASE + url,
+      (bmp) => {
+        const t = new Texture(bmp);
+        t.needsUpdate = true;
+        res(prepTexture(t, anisotropy));
+      },
+      undefined,
+      () => res(null)
+    )
+  );
+}
+async function uploadTexture(gl, t) {
+  if (!t) return null;
+  await nextFrame();
+  gl.initTexture(t);
+  return t;
+}
+function disposeTexture(t) {
+  if (!t) return;
+  t.dispose();
+  if (t.image && t.image.close) t.image.close();
+}
+
+// Point a group's material at its full-res textures (when focused on a phone)
+// or at the regular ones.
+function applyTextures(g) {
+  const u = g.mat.uniforms;
+  const hi = g.hi || {};
+  u.uDay.value = hi.day || g.lo.day;
+  if (g.lo.base) u.uBase.value = hi.base || g.lo.base;
+  if (g.lo.albedo) u.uAlbedo.value = hi.albedo || g.lo.albedo;
+  if (g.lo.la) u.uLA.value = hi.la || g.lo.la;
+  if (g.lo.lb) u.uLB.value = hi.lb || g.lo.lb;
+}
+
 function prepTexture(t, anisotropy = 8) {
   t.flipY = false; // glTF UV convention
   t.colorSpace = SRGBColorSpace;
@@ -218,7 +275,7 @@ function Room({ manifest, onHotspot }) {
   const { scene } = useGLTF(ROOM_BASE + manifest.glb, true);
   const dayTextures = useLoader(
     TextureLoader,
-    manifest.bakes.map((b) => ROOM_BASE + b.day)
+    manifest.bakes.map((b) => ROOM_BASE + pick(b.day, b.dayM))
   );
   const [nightReady, setNightReady] = useState(false);
   const { preset } = useRoomState();
@@ -248,7 +305,7 @@ function Room({ manifest, onHotspot }) {
       }
       const mat = bakedMaterial(day, blank);
       meshes.forEach((m) => (m.material = mat));
-      baked.push({ mat, night: b.night });
+      baked.push({ mat, night: b.night, entry: b, lo: { day }, hi: null });
       if (b.mesh === "Bake_Chair") {
         // the chair can fade out when it stands between the camera and a focused object
         mat.transparent = true;
@@ -368,11 +425,11 @@ function Room({ manifest, onHotspot }) {
     });
   }, [room]);
 
-  // Night textures: fetched only once a night mood is picked (or the intro has
-  // finished and the page is idle), then uploaded to the GPU one per frame so
-  // there is never a long freeze.
-  const { introPlayed } = useRoomState();
-  const wantNight = (preset && preset !== "day") || introPlayed;
+  // Night textures: fetched only once a night mood is picked (on desktop also
+  // once the intro has finished), then uploaded one per frame so there is never
+  // a long freeze.
+  const { introPlayed, focus } = useRoomState();
+  const wantNight = (preset && preset !== "day") || (!MOBILE && introPlayed);
   useEffect(() => {
     if (room.nightLoaded) {
       setNightReady(true);
@@ -380,44 +437,20 @@ function Room({ manifest, onHotspot }) {
     }
     if (!wantNight || room.nightLoading) return;
     room.nightLoading = true;
-    // ImageBitmapLoader decodes the JPGs off the main thread (TextureLoader
-    // decodes on upload, which stalls a frame for every 4K texture)
-    const loader = new ImageBitmapLoader(lateManager);
-    loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" });
-    const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
-    const load = (url) =>
-      new Promise((res) =>
-        loader.load(
-          ROOM_BASE + url,
-          (bmp) => {
-            const t = new Texture(bmp);
-            t.needsUpdate = true;
-            res(prepTexture(t, 4));
-          },
-          undefined,
-          () => res(null)
-        )
-      );
-    const upload = async (t) => {
-      if (!t) return null;
-      await nextFrame();
-      gl.initTexture(t);
-      return t;
-    };
     const delay = preset && preset !== "day" ? 0 : 1500;
     let fired = false;
     const id = setTimeout(async () => {
       fired = true;
-      for (const { mat, night } of room.baked) {
-        const tex = await Promise.all([night.base, night.albedo, ...night.layers].map(load));
+      for (const g of room.baked) {
+        const n = g.night;
+        const urls = [pick(n.base, n.baseM), pick(n.albedo, n.albedoM), ...(MOBILE && n.layersM ? n.layersM : n.layers)];
+        const tex = await Promise.all(urls.map((u) => loadBitmapTexture(u, 4)));
         const up = [];
-        for (const t of tex) up.push(await upload(t));
-        if (up[0]) mat.uniforms.uBase.value = up[0];
-        if (up[1]) mat.uniforms.uAlbedo.value = up[1];
-        if (up[2]) mat.uniforms.uLA.value = up[2];
-        if (up[3]) mat.uniforms.uLB.value = up[3];
-        mat.userData.kBase = night.kBase;
-        mat.userData.k = night.k;
+        for (const t of tex) up.push(await uploadTexture(gl, t));
+        Object.assign(g.lo, { base: up[0], albedo: up[1], la: up[2], lb: up[3] });
+        applyTextures(g);
+        g.mat.userData.kBase = n.kBase;
+        g.mat.userData.k = n.k;
       }
       room.nightLoaded = true;
       setNightReady(true);
@@ -427,6 +460,50 @@ function Room({ manifest, onHotspot }) {
       if (!fired) room.nightLoading = false;
     };
   }, [room, wantNight]);
+
+  // Phones: full-resolution textures only for the groups around the focused object
+  useEffect(() => {
+    if (!MOBILE) return;
+    const wanted = new Set(((focus && HOTSPOTS[focus]?.groups) || []).map((g) => "Bake_" + g));
+    // release groups we no longer look at
+    for (const g of room.baked) {
+      if (g.hi && !wanted.has(g.entry.mesh)) {
+        const old = g.hi;
+        g.hi = null;
+        applyTextures(g);
+        Object.values(old).forEach(disposeTexture);
+      }
+    }
+    let cancelled = false;
+    (async () => {
+      for (const g of room.baked) {
+        if (!wanted.has(g.entry.mesh) || g.hi || !g.entry.dayM) continue;
+        const n = g.night;
+        const jobs = { day: g.entry.day };
+        if (room.nightLoaded && n) {
+          if (n.baseM) jobs.base = n.base;
+          if (n.albedoM) jobs.albedo = n.albedo;
+          if (n.layersM && n.layersM[0] !== n.layers[0]) {
+            jobs.la = n.layers[0];
+            jobs.lb = n.layers[1];
+          }
+        }
+        const hi = {};
+        for (const [k, url] of Object.entries(jobs)) {
+          hi[k] = await uploadTexture(gl, await loadBitmapTexture(url, k === "day" ? 8 : 4));
+          if (cancelled) {
+            Object.values(hi).forEach(disposeTexture);
+            return;
+          }
+        }
+        g.hi = hi;
+        applyTextures(g);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [focus, room]);
 
   useEffect(() => {
     setPresetTarget(preset);
