@@ -586,6 +586,12 @@ function Room({ manifest, onHotspot }) {
       room.baked.forEach((g) => textures.add(g.mat.uniforms.uDay.value));
       room.glows.forEach((g) => textures.add(g.mesh.material.uniforms.uDay.value));
       room.lit.forEach((l) => l.mat.map && textures.add(l.mat.map));
+      // props on the water (ducks, orbs) too
+      rootScene.traverse((o) => {
+        const m = o.material;
+        if (!m || m.isShaderMaterial) return;
+        ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "aoMap"].forEach((k) => m[k] && textures.add(m[k]));
+      });
       for (const t of textures) {
         if (!alive) return;
         await nextFrame();

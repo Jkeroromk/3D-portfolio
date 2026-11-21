@@ -159,6 +159,7 @@ function Ducks() {
 
   const p = useMemo(() => new Vector3(), []);
   useFrame((state, delta) => {
+    if (!getRoomState().started) return; // mounted early so it compiles during the warm-up
     const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
     const pr = parade.current;
@@ -413,9 +414,19 @@ function Koi() {
   }, [scene]);
   const holder = useRef();
   const pitch = useRef();
+  const { gl, camera, scene: root } = useThree();
   useEffect(() => {
-    if (holder.current) holder.current.name = "Koi";
-  }, []);
+    const g = holder.current;
+    if (!g) return;
+    g.name = "Koi";
+    // upload and compile now, while it's hidden, not on its first jump
+    g.traverse((o) => {
+      const m = o.material;
+      if (m) ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap"].forEach((k) => m[k] && gl.initTexture(m[k]));
+    });
+    if (gl.compileAsync) gl.compileAsync(g, camera, root).catch(() => {});
+    else gl.compile(g, camera, root);
+  }, [fitted]);
   const mixer = useMemo(() => new AnimationMixer(fish), [fish]);
   useEffect(() => {
     animations.forEach((clip) => mixer.clipAction(clip).play());
@@ -429,7 +440,7 @@ function Koi() {
     if (!g) return;
     if (j.t < 0) {
       g.visible = false;
-      if (live.night < 0.5) return;
+      if (live.night < 0.5 || !getRoomState().started) return;
       j.wait -= dt;
       if (j.wait > 0) return;
       // pick a spot and a direction, then leap
@@ -526,7 +537,7 @@ function Fireflies() {
   );
   useFrame((state) => {
     mat.uniforms.uTime.value = state.clock.elapsedTime;
-    mat.uniforms.uAlpha.value = Math.max(0, live.night - 0.3) / 0.7;
+    mat.uniforms.uAlpha.value = getRoomState().started ? Math.max(0, live.night - 0.3) / 0.7 : 0;
     mat.uniforms.uSize.value = 55 * gl.getPixelRatio() * (size.height / 900);
   });
   const pts = useRef();
@@ -568,10 +579,11 @@ function PropLights() {
 }
 
 export default function WaterLife() {
-  const { started, preset } = useRoomState();
+  // Mounted from the start (everything stays hidden until Enter), so the
+  // models and shaders are ready by the warm-up instead of compiling mid-flight.
+  const { preset, ready } = useRoomState();
   const nightEver = useRef(false);
   if (preset && preset !== "day") nightEver.current = true;
-  if (!started) return null;
   return (
     <>
       <PropLights />
@@ -580,8 +592,8 @@ export default function WaterLife() {
       </Suspense>
       <Fireflies />
       <Orbs />
-      {/* the koi only loads once a night preset has been used */}
-      {nightEver.current && (
+      {/* the koi (5 MB) only loads once the room is up and a night preset has been used */}
+      {nightEver.current && ready && (
         <Suspense fallback={null}>
           <Koi />
         </Suspense>
