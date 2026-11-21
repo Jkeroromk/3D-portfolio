@@ -24,6 +24,7 @@ import {
 import { HOTSPOTS, ROOM_BASE } from "./roomConfig.js";
 import { MOBILE } from "./device.js";
 import RoomWorld, { REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
+import WaterLife from "./WaterLife.jsx";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
 import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js";
 
@@ -976,6 +977,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         rotateSpeed={0.5}
       />
       <RoomWorld />
+      <WaterLife />
       <Suspense fallback={null}>{manifest && <Room manifest={manifest} onHotspot={onHotspot} />}</Suspense>
     </>
   );

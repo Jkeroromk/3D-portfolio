@@ -28,7 +28,21 @@ import { MOBILE } from "./device.js";
 export const REFLECT_LAYER = 1;
 export const WATER_Y = -1.7; // 0.4 m below the room floor, as in the Blender concept
 // The plinth in world space (centre 0,0) - ripples ring out from its edges
-const PLINTH_HALF = new Vector2(2.68, 1.61);
+export const PLINTH_HALF = new Vector2(2.68, 1.61);
+
+// Ripples anyone can drop into the water (clicks, ducks surfacing, koi
+// splashing): x, z, start time, strength. Oldest one is recycled.
+const MAX_RIPPLES = 8;
+const ripples = Array.from({ length: MAX_RIPPLES }, () => new Vector4(0, 0, -100, 0));
+let rippleNext = 0;
+let clockNow = 0;
+export function addRipple(x, z, strength = 1) {
+  ripples[rippleNext].set(x, z, clockNow, strength);
+  rippleNext = (rippleNext + 1) % MAX_RIPPLES;
+}
+
+// Warm light pools on the water under the floating lanterns (x, z, intensity)
+export const lanternGlow = Array.from({ length: 6 }, () => new Vector3(0, 0, 0));
 
 const skyVertex = /* glsl */ `
   varying vec3 vDir;
@@ -92,6 +106,8 @@ const waterFragment = /* glsl */ `
   uniform vec3 uHorizon;
   uniform vec3 uGlow;
   uniform vec2 uPlinth;
+  uniform vec4 uRipples[${MAX_RIPPLES}];
+  uniform vec3 uLanterns[6];
   varying vec3 vWorld;
   varying vec4 vReflect;
 
@@ -120,6 +136,20 @@ const waterFragment = /* glsl */ `
       h.x += sin(ph) * 0.012 * env;
       h.yz += grad * cos(ph) * 0.012 * k * env;
     }
+    // ripples dropped in by clicks, ducks and fish
+    for (int i = 0; i < ${MAX_RIPPLES}; i++) {
+      vec4 rp = uRipples[i];
+      float age = uTime - rp.z;
+      if (age < 0.0 || age > 4.0 || rp.w <= 0.0) continue;
+      vec2 dv = p - rp.xy;
+      float d = length(dv) + 1e-4;
+      float front = age * 1.15;
+      float x = d - front;
+      float env = exp(-x * x * 10.0) * exp(-age * 0.9) * smoothstep(0.0, 0.15, age) * rp.w;
+      float k = 16.0;
+      h.x += sin(x * k) * 0.02 * env;
+      h.yz += (dv / d) * cos(x * k) * 0.02 * k * env;
+    }
     return h;
   }
 
@@ -147,6 +177,13 @@ const waterFragment = /* glsl */ `
     vec2 q = abs(vWorld.xz) - uPlinth;
     float pd = length(max(q, 0.0));
     col += uGlow * exp(-pd * 1.6) * 0.5;
+    // floating lanterns light the water around them
+    for (int i = 0; i < 6; i++) {
+      vec3 l = uLanterns[i];
+      if (l.z <= 0.0) continue;
+      float dl = length(vWorld.xz - l.xy);
+      col += vec3(1.0, 0.62, 0.28) * l.z * (exp(-dl * 3.2) * 0.9 + exp(-dl * 0.9) * 0.12);
+    }
     // haze into the horizon
     col = mix(col, uHorizon, smoothstep(10.0, 48.0, dist));
     gl_FragColor = vec4(col, 1.0);
@@ -197,6 +234,8 @@ export default function RoomWorld() {
           uHorizon: { value: new Color() },
           uGlow: { value: new Vector3() },
           uPlinth: { value: PLINTH_HALF.clone() },
+          uRipples: { value: ripples },
+          uLanterns: { value: lanternGlow },
         },
         vertexShader: waterVertex,
         fragmentShader: waterFragment,
@@ -239,6 +278,7 @@ export default function RoomWorld() {
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
+    clockNow = time;
     const night = live.night;
     const I = live.intro;
 
@@ -318,7 +358,18 @@ export default function RoomWorld() {
       <mesh ref={sky} material={skyMat} frustumCulled={false} renderOrder={-10} onUpdate={(m) => m.layers.enable(REFLECT_LAYER)}>
         <sphereGeometry args={[150, 48, 24]} />
       </mesh>
-      <mesh ref={water} material={waterMat} rotation={[-Math.PI / 2, 0, 0]} position={[0, WATER_Y, 0]}>
+      <mesh
+        ref={water}
+        material={waterMat}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, WATER_Y, 0]}
+        onClick={(e) => {
+          // ignore the end of a drag (orbiting)
+          if (e.delta > 6) return;
+          e.stopPropagation();
+          addRipple(e.point.x, e.point.z, 1);
+        }}
+      >
         <planeGeometry args={[400, 400, 1, 1]} />
       </mesh>
     </>
