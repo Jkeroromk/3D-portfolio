@@ -2,7 +2,8 @@ import "./style.css";
 import ReactDOM from "react-dom/client";
 import { Canvas } from "@react-three/fiber";
 import Experience from "./Experience.jsx";
-import WorkPlaceScene from "./Workplace.jsx";
+import WorkPlaceScene from "./room/BakedRoom.jsx";
+import RoomOverlay from "./room/RoomOverlay.jsx";
 import Shadow from "./Components/Shadow.jsx";
 import { Suspense, useState, useRef } from "react";
 import { LoadingScreen } from "./LoadingScreen.jsx";
@@ -86,6 +87,7 @@ function App() {
     <>
       {!started && <LoadingScreen started={started} onStarted={handleStart} />}
       {started && isNavVisible && <NavBar started={started} onSelectView={handleViewChange} />}
+      {view === "workplace" && <RoomOverlay />}
       <Canvas
         className="r3f"
         style={{ opacity: 1 }}

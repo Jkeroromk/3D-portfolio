@@ -1,0 +1,85 @@
+{
+  "glb": "room.glb",
+  "bakes": [
+    {
+      "mesh": "Bake_Room",
+      "day": "bake/Room_day.jpg",
+      "night": "bake/Room_night.jpg"
+    },
+    {
+      "mesh": "Bake_Sofa",
+      "day": "bake/Sofa_day.jpg",
+      "night": "bake/Sofa_night.jpg"
+    },
+    {
+      "mesh": "Bake_Desk",
+      "day": "bake/Desk_day.jpg",
+      "night": "bake/Desk_night.jpg"
+    },
+    {
+      "mesh": "Bake_PC",
+      "day": "bake/PC_day.jpg",
+      "night": "bake/PC_night.jpg"
+    },
+    {
+      "mesh": "Bake_Shelf",
+      "day": "bake/Shelf_day.jpg",
+      "night": "bake/Shelf_night.jpg"
+    },
+    {
+      "mesh": "Bake_Chair",
+      "day": "bake/Chair_day.jpg",
+      "night": "bake/Chair_night.jpg"
+    },
+    {
+      "mesh": "Bake_Lego",
+      "day": "bake/Lego_day.jpg",
+      "night": "bake/Lego_night.jpg"
+    }
+  ],
+  "screens": [
+    {
+      "mesh": "Screen_G9",
+      "image": "screens/g9_kerocam.jpg"
+    },
+    {
+      "mesh": "Screen_Upper",
+      "video": "screens/911.mp4"
+    },
+    {
+      "mesh": "Screen_Vert",
+      "image": "screens/vert_code.jpg"
+    },
+    {
+      "mesh": "Photo_Couple",
+      "image": "screens/photo_couple.jpg",
+      "day": 1.0,
+      "night": 0.8
+    },
+    {
+      "mesh": "Photo_Doudou",
+      "image": "screens/photo_doudou.jpg",
+      "day": 1.0,
+      "night": 0.8
+    }
+  ],
+  "nightOnly": [
+    {
+      "mesh": "Night_StripDesk",
+      "color": [
+        0.45,
+        0.55,
+        1.0
+      ]
+    },
+    {
+      "mesh": "Night_StripUnder",
+      "color": [
+        0.7,
+        0.35,
+        1.0
+      ]
+    }
+  ],
+  "chair": "Chair_Swivel"
+}
