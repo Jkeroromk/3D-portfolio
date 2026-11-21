@@ -8,11 +8,11 @@ import {
   BufferGeometry,
   Color,
   Group,
+  Mesh,
   LoopRepeat,
   ShaderMaterial,
   Vector3,
 } from "three";
-import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { live } from "./lighting.js";
 import { useRoomState } from "./roomStore.js";
 import { addRipple, lanternGlow, PLINTH_HALF, REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
@@ -230,30 +230,28 @@ function Ducks() {
 /* ---------------- night: lanterns ---------------- */
 
 function Lanterns() {
-  const { scene, animations } = useGLTF(PROPS + "lotus_lantern.glb");
-  const items = useMemo(
-    () =>
-      Array.from({ length: 6 }, (_, i) => {
-        const obj = cloneSkinned(scene);
-        obj.name = "Lantern";
-        obj.scale.setScalar(3.2); // ~60 cm across
-        obj.traverse((o) => {
-          if (o.isMesh) {
-            o.layers.enable(REFLECT_LAYER);
-            o.frustumCulled = false;
-          }
-        });
-        const mixer = new AnimationMixer(obj);
-        animations.forEach((clip) => {
-          const a = mixer.clipAction(clip);
-          a.setLoop(LoopRepeat, Infinity);
-          a.time = Math.random() * clip.duration;
-          a.play();
-        });
-        return { obj, mixer, angle: (i / 6) * Math.PI * 2 + rand(-0.25, 0.25), radius: rand(0.55, 2.6), speed: rand(0.008, 0.018), phase: rand(0, 6.28) };
-      }),
-    [scene, animations]
-  );
+  const { scene } = useGLTF(PROPS + "lotus_lantern.glb");
+  // The model is skinned, and its skeleton carries a 0.01 FBX unit scale that
+  // shrinks it to a centimetre. Its bind-pose mesh is the right size (~26 cm),
+  // so use that as a plain mesh and animate the bobbing ourselves.
+  const items = useMemo(() => {
+    let src = null;
+    scene.traverse((o) => {
+      if (!src && (o.isSkinnedMesh || o.isMesh)) src = o;
+    });
+    return Array.from({ length: 6 }, (_, i) => {
+      const obj = new Group();
+      obj.name = "Lantern";
+      if (src) {
+        const m = new Mesh(src.geometry, src.material);
+        m.layers.enable(REFLECT_LAYER);
+        obj.add(m);
+      }
+      obj.scale.setScalar(2.2); // ~57 cm across
+      obj.visible = false;
+      return { obj, angle: (i / 6) * Math.PI * 2 + rand(-0.25, 0.25), radius: rand(0.55, 2.6), speed: rand(0.008, 0.018), phase: rand(0, 6.28) };
+    });
+  }, [scene]);
   const tmp = useMemo(() => new Vector3(), []);
   const fade = useRef(0);
   useFrame((state, delta) => {
@@ -261,7 +259,6 @@ function Lanterns() {
     const want = live.night > 0.5 ? 1 : 0;
     fade.current += (want - fade.current) * Math.min(1, delta * 1.5);
     items.forEach((it, i) => {
-      it.mixer.update(Math.min(delta, 0.05));
       it.angle += it.speed * delta;
       ringPoint(it.angle, it.radius, tmp);
       it.obj.position.set(tmp.x, WATER_Y - 0.04 + Math.sin(t * 0.9 + it.phase) * 0.015 - (1 - fade.current) * 0.7, tmp.z);
@@ -293,6 +290,9 @@ function Koi() {
     return obj;
   }, [scene]);
   const holder = useRef();
+  useEffect(() => {
+    if (holder.current) holder.current.name = "Koi";
+  }, []);
   const mixer = useMemo(() => new AnimationMixer(fish), [fish]);
   useEffect(() => {
     animations.forEach((clip) => mixer.clipAction(clip).play());
