@@ -120,9 +120,9 @@ const vertex = /* glsl */ `
   varying float vWorldY;
   void main() {
     vUv = uv;
-    vec4 w = modelMatrix * vec4(position, 1.0);
-    vWorldY = w.y;
-    gl_Position = projectionMatrix * viewMatrix * w;
+    vWorldY = (modelMatrix * vec4(position, 1.0)).y;
+    // same maths as three's built-in materials, so depth matches the pre-pass exactly
+    gl_Position = projectionMatrix * (modelViewMatrix * vec4(position, 1.0));
   }
 `;
 

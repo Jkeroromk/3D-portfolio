@@ -94,7 +94,7 @@ const waterVertex = /* glsl */ `
     vec4 w = modelMatrix * vec4(position, 1.0);
     vWorld = w.xyz;
     vReflect = uTexMat * w;
-    gl_Position = projectionMatrix * viewMatrix * w;
+    gl_Position = projectionMatrix * (modelViewMatrix * vec4(position, 1.0));
   }
 `;
 

@@ -18,7 +18,18 @@ import { renderFlags } from "./renderFlags.js";
  */
 export default function RoomRenderer() {
   const { gl, setDpr } = useThree();
-  const depthOnly = useMemo(() => new MeshBasicMaterial({ colorWrite: false, side: DoubleSide }), []);
+  // pushed back a hair so the colour pass always passes where it should
+  const depthOnly = useMemo(
+    () =>
+      new MeshBasicMaterial({
+        colorWrite: false,
+        side: DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 2,
+      }),
+    []
+  );
   const maxDpr = useMemo(() => Math.min(window.devicePixelRatio || 1, 1.5), []);
   const perf = useRef({ dpr: maxDpr, avg: 16.7, slow: 0, fast: 0, last: performance.now() });
   const hidden = useMemo(() => [], []);
