@@ -1,10 +1,11 @@
 import { Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   AdditiveBlending,
   Box3,
   Color,
+  Group,
   MeshBasicMaterial,
   Quaternion,
   ShaderMaterial,
@@ -186,8 +187,24 @@ function Room({ manifest }) {
       o.renderOrder = 10;
     });
 
-    const swivel = scene.getObjectByName(manifest.chair || "Chair_Swivel") || null;
-    const swivelRest = swivel ? swivel.quaternion.clone() : null;
+    // Chair: the exporter wrote the seat's world transform as its local one,
+    // so lift it out of the pivot empty, put it back where it belongs, and
+    // hang it on a fresh pivot at the gas-lift axis.
+    let swivel = null;
+    let swivelRest = null;
+    const pivotNode = scene.getObjectByName(manifest.chair || "Chair_Swivel");
+    const seat = scene.getObjectByName("Bake_Chair");
+    if (pivotNode && seat) {
+      seat.removeFromParent();
+      scene.add(seat); // its local transform is its true placement
+      swivel = new Group();
+      swivel.name = "ChairPivot";
+      swivel.position.copy(pivotNode.position);
+      scene.add(swivel);
+      scene.updateMatrixWorld(true);
+      swivel.attach(seat);
+      swivelRest = swivel.quaternion.clone();
+    }
 
     // Centre the room on the origin with the floor at FLOOR_Y
     const box = new Box3().setFromObject(scene);
@@ -238,6 +255,11 @@ function Room({ manifest }) {
     setRoomState({ loadingNight: night && !nightReady });
   }, [night, nightReady]);
 
+  // Everything Room suspends on (glb + day textures) is in: hide the loader
+  useEffect(() => {
+    setRoomState({ ready: true });
+  }, []);
+
   const tmpQ = useMemo(() => new Quaternion(), []);
   useFrame((state, delta) => {
     const goal = night && nightReady ? 1 : 0;
@@ -256,7 +278,7 @@ function Room({ manifest }) {
     // Lazy back-and-forth swivel, like someone fidgeting in the chair
     if (room.swivel) {
       const t = state.clock.elapsedTime;
-      const angle = Math.sin(t * 0.45) * 0.5 + Math.sin(t * 0.17) * 0.15;
+      const angle = Math.sin(t * 0.4) * 0.35 + Math.sin(t * 0.13) * 0.1;
       tmpQ.setFromAxisAngle(Y_AXIS, angle);
       room.swivel.quaternion.copy(room.swivelRest).multiply(tmpQ);
     }
@@ -335,7 +357,12 @@ export default function BakedRoomScene() {
     }
   }, [camera, size.width, size.height]);
 
-  useEffect(() => () => setCursor("auto"), []);
+  useEffect(() => {
+    return () => {
+      setCursor("auto");
+      setRoomState({ ready: false });
+    };
+  }, []);
 
   return (
     <>
@@ -354,7 +381,7 @@ export default function BakedRoomScene() {
         maxAzimuthAngle={0.05}
         rotateSpeed={0.5}
       />
-      {manifest && <Room manifest={manifest} />}
+      <Suspense fallback={null}>{manifest && <Room manifest={manifest} />}</Suspense>
     </>
   );
 }

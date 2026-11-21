@@ -16,6 +16,7 @@ function App() {
   const [started, setStarted] = useState(false);
   const [isNavVisible, setIsNavVisible] = useState(true); // Make sure this is initialized properly
   const [view, setView] = useState("default");
+  const [contentView, setContentView] = useState("default");
   const [currentContent, setCurrentContent] = useState(
     <Experience started={started} onToggleNav={setIsNavVisible} />
   );
@@ -51,6 +52,7 @@ function App() {
       duration: 1.5,
       ease: "power2.inOut",
       onComplete: () => {
+        setContentView(newView);
         setCurrentContent(
           newView === "workplace" ? (
             <WorkPlaceScene />
@@ -87,7 +89,7 @@ function App() {
     <>
       {!started && <LoadingScreen started={started} onStarted={handleStart} />}
       {started && isNavVisible && <NavBar started={started} onSelectView={handleViewChange} />}
-      {view === "workplace" && <RoomOverlay />}
+      {contentView === "workplace" && <RoomOverlay />}
       <Canvas
         className="r3f"
         style={{ opacity: 1 }}

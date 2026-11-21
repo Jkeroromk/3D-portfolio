@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 // Tiny shared store so the HTML overlay (outside the canvas) and the 3D room
 // (inside the canvas) agree on day/night and on whether the credits are open.
-let state = { night: false, credits: false, hover: null };
+let state = { night: false, credits: false, ready: false, loadingNight: false };
 const listeners = new Set();
 
 export function setRoomState(patch) {

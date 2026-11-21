@@ -1,12 +1,22 @@
+import { useProgress } from "@react-three/drei";
 import { CREDITS } from "./roomConfig.js";
 import { setRoomState, useRoomState } from "./roomStore.js";
 
 // HTML controls shown on top of the WorkPlace room: day/night switch and credits.
 export default function RoomOverlay() {
-  const { night, credits, loadingNight } = useRoomState();
+  const { night, credits, loadingNight, ready } = useRoomState();
+  const { progress } = useProgress();
 
   return (
     <>
+      <div className={`room-loader ${ready ? "room-loader--done" : ""}`} aria-hidden={ready}>
+        <div className="room-loader__title">Loading my room</div>
+        <div className="room-loader__bar">
+          <div className="room-loader__fill" style={{ width: `${Math.max(4, Math.round(progress))}%` }} />
+        </div>
+        <div className="room-loader__pct">{Math.round(progress)}%</div>
+      </div>
+
       <button
         className={`room-toggle ${night ? "room-toggle--night" : ""}`}
         onClick={() => setRoomState({ night: !night })}
