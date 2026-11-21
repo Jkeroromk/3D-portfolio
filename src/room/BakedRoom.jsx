@@ -36,7 +36,8 @@ const HOME = { azimuth: -0.62, polar: 0.98, distance: 4.4 };
 const INTRO = { azimuth: -1.15, polar: 1.25, distance: 13 };
 const DESKTOP_ASPECT = 1.6;
 const Y_AXIS = new Vector3(0, 1, 0);
-const EXPOSURE = Math.pow(2, 0.75); // Blender night exposure
+const EXPOSURE = Math.pow(2, 0.5); // fitted against the Cycles night bake
+const CONTRAST = 0.55;
 
 function prepTexture(t) {
   t.flipY = false; // glTF UV convention
@@ -150,7 +151,7 @@ function bakedMaterial(day, blank) {
     uDayGain: { value: 0 },
     uBaseK: { value: 0 },
     uExposure: { value: EXPOSURE },
-    uContrast: { value: 0.35 },
+    uContrast: { value: CONTRAST },
     uCol: { value: LAYER_NAMES.map(() => new Vector3()) },
   };
   LAYER_NAMES.forEach((_, i) => (u["uL" + i] = { value: blank }));
@@ -163,7 +164,7 @@ function glowMaterial(day) {
       uDay: { value: day },
       uNight: { value: 0 },
       uDayGain: { value: 0 },
-      uContrast: { value: 0.35 },
+      uContrast: { value: CONTRAST },
       uGlow: { value: new Vector3() },
     },
     vertexShader: vertex,
