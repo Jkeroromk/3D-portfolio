@@ -86,6 +86,27 @@
    }
   },
   {
+   "mesh": "Bake_Speakers",
+   "day": "bake/Speakers_day.jpg",
+   "night": {
+    "base": "night/Speakers_base.jpg",
+    "albedo": "night/Speakers_albedo.jpg",
+    "layers": [
+     "night/Speakers_layersA.jpg",
+     "night/Speakers_layersB.jpg"
+    ],
+    "kBase": 2.545067,
+    "k": [
+     1.125336,
+     2.797117,
+     0.01072,
+     0.005245,
+     2.045987,
+     0.002159
+    ]
+   }
+  },
+  {
    "mesh": "Bake_PC",
    "day": "bake/PC_day.jpg",
    "night": {

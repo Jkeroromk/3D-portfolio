@@ -13,6 +13,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   Quaternion,
+  Ray,
   ShaderMaterial,
   SRGBColorSpace,
   Spherical,
@@ -107,6 +108,7 @@ const bakedFragment = /* glsl */ `
   uniform sampler2D uLA; // light layers 0-2 packed in r, g, b
   uniform sampler2D uLB; // light layers 3-5
   uniform float uNight;
+  uniform float uOpacity;
   uniform float uDayGain;
   uniform float uBaseK;
   uniform float uExposure;
@@ -126,7 +128,7 @@ const bakedFragment = /* glsl */ `
       vec3 hdr = texture2D(uBase, vUv).rgb * uBaseK + albedo * light;
       col = mix(day, agx(hdr * uExposure), uNight);
     }
-    gl_FragColor = vec4(col, 1.0);
+    gl_FragColor = vec4(col, uOpacity);
     #include <colorspace_fragment>
   }
 `;
@@ -153,6 +155,7 @@ function bakedMaterial(day, blank) {
     uBase: { value: blank },
     uAlbedo: { value: blank },
     uNight: { value: 0 },
+    uOpacity: { value: 1 },
     uDayGain: { value: 0 },
     uBaseK: { value: 0 },
     uExposure: { value: EXPOSURE },
@@ -228,6 +231,7 @@ function Room({ manifest, onHotspot }) {
     const lit = [];
     const nightOnly = [];
     const glowInfo = {};
+    let chair = null;
     (manifest.glow || []).forEach((g) => (glowInfo[g.mesh] = g));
 
     manifest.bakes.forEach((b, i) => {
@@ -245,6 +249,11 @@ function Room({ manifest, onHotspot }) {
       const mat = bakedMaterial(day, blank);
       meshes.forEach((m) => (m.material = mat));
       baked.push({ mat, night: b.night });
+      if (b.mesh === "Bake_Chair") {
+        // the chair can fade out when it stands between the camera and a focused object
+        mat.transparent = true;
+        chair = { mat, mesh: meshes[0], opacity: 1 };
+      }
     });
 
     (manifest.screens || []).forEach((s) => {
@@ -337,7 +346,7 @@ function Room({ manifest, onHotspot }) {
     const c = bb.getCenter(new Vector3());
     const offset = new Vector3(-c.x, FLOOR_Y - bb.min.y, -c.z);
 
-    const r = { baked, glows, lit, nightOnly, swivel, swivelRest, fans, hotspots, offset, nightLoaded: false };
+    const r = { baked, glows, lit, nightOnly, swivel, swivelRest, fans, hotspots, offset, chair, nightLoaded: false };
     scene.userData.room = r;
     return r;
   }, [scene, manifest, dayTextures]);
@@ -481,6 +490,15 @@ function Room({ manifest, onHotspot }) {
 
     room.fans.forEach((f) => f.pivot.rotateOnAxis(f.axis, f.speed * dt));
 
+    if (room.chair) {
+      const c = room.chair;
+      const want = getRoomState().chairHidden ? 0 : 1;
+      c.opacity += (want - c.opacity) * (1 - Math.exp(-dt * 8));
+      c.mat.uniforms.uOpacity.value = c.opacity;
+      c.mat.depthWrite = c.opacity > 0.98;
+      c.mesh.visible = c.opacity > 0.02;
+    }
+
     // Lazy back-and-forth swivel, like someone fidgeting in the chair
     if (room.swivel) {
       const t = state.clock.elapsedTime;
@@ -550,6 +568,22 @@ function focusPose(key, spot, aspect, pullBack) {
     look.addScaledVector(right, -shift * d * HALF_FOV * aspect);
   }
   return { pos, target: look };
+}
+
+// Is the (swivelling) chair between the camera and what it looks at? The chair
+// swings about ±25°, so its box is padded a little.
+const _box = new Box3();
+const _ray = new Ray();
+const _hit = new Vector3();
+function chairInTheWay(scene, pose) {
+  const chair = scene.getObjectByName("Bake_Chair");
+  if (!chair) return false;
+  _box.setFromObject(chair).expandByScalar(0.08);
+  const dir = pose.target.clone().sub(pose.pos);
+  const len = dir.length();
+  _ray.set(pose.pos, dir.normalize());
+  const hit = _ray.intersectBox(_box, _hit);
+  return !!hit && hit.distanceTo(pose.pos) < len;
 }
 
 // Pre-Enter framing: whole room on the right, landing text on the left
@@ -630,6 +664,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         saved.current = { pos: camera.position.clone(), target: controls.current.target.clone() };
       }
       const pose = focusPose(focus, spots[focus], size.width / size.height, pullBack);
+      setRoomState({ chairHidden: chairInTheWay(scene, pose) });
       if (HOTSPOTS[focus].action === "macbook") {
         // frame the MacBook, then push in close before the scene change
         const close = {
@@ -647,6 +682,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       }
     } else if (!focus && saved.current) {
       hold.current = null;
+      setRoomState({ chairHidden: false });
       startTween(saved.current, 1.2, () => {});
       saved.current = null;
     }
@@ -658,7 +694,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
     return () => {
       window.removeEventListener("keydown", onKey);
       setCursor("auto");
-      setRoomState({ ready: false, focus: null, hover: null });
+      setRoomState({ ready: false, focus: null, hover: null, chairHidden: false });
     };
   }, []);
 
