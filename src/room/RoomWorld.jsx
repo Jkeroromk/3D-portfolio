@@ -16,6 +16,7 @@ import {
 } from "three";
 import { live } from "./lighting.js";
 import { MOBILE } from "./device.js";
+import { renderFlags } from "./renderFlags.js";
 
 /*
  * The world around the room: a sky dome that follows the lighting preset
@@ -308,6 +309,7 @@ export default function RoomWorld() {
   useEffect(() => {
     if (!reflect || !water.current) return;
     water.current.onBeforeRender = (renderer, _scene, camera) => {
+      if (renderFlags.prepass) return; // depth pre-pass: no reflection needed
       const gl = renderer;
 
       // mirror the camera in the water plane (as three's Reflector does)

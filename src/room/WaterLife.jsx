@@ -5,6 +5,7 @@ import {
   AdditiveBlending,
   AnimationMixer,
   BufferAttribute,
+  Box3,
   BufferGeometry,
   Color,
   Group,
@@ -17,6 +18,7 @@ import { live } from "./lighting.js";
 import { useRoomState } from "./roomStore.js";
 import { addRipple, lanternGlow, PLINTH_HALF, REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
 import { ROOM_BASE } from "./roomConfig.js";
+import { renderFlags } from "./renderFlags.js";
 
 /*
  * Life on the water:
@@ -28,6 +30,23 @@ import { ROOM_BASE } from "./roomConfig.js";
  */
 
 const PROPS = ROOM_BASE + "props/";
+
+// Sketchfab exports carry their own node scales/rotations, so measure the
+// real bounding box and wrap the model so it is `size` metres along its
+// longest side (or `height` tall), centred on x/z with its base at y = 0.
+function fitModel(model, { size, height }) {
+  const box = new Box3().setFromObject(model);
+  const dims = box.getSize(new Vector3());
+  const k = height ? height / dims.y : size / Math.max(dims.x, dims.y, dims.z);
+  const inner = new Group();
+  inner.add(model);
+  const c = box.getCenter(new Vector3());
+  model.position.sub(new Vector3(c.x, box.min.y, c.z));
+  const outer = new Group();
+  outer.add(inner);
+  inner.scale.setScalar(k);
+  return { obj: outer, dims: dims.multiplyScalar(k) };
+}
 const DUCKS = 5;
 const DUCK_HEIGHT = 0.36; // toy-sized next to the room, big enough to spot
 // the duck model faces +z; tweak here if it swims sideways
@@ -105,15 +124,13 @@ function Ducks() {
 
   // sitting a little into the water
   const clones = useMemo(() => {
-    const s = DUCK_HEIGHT / 3.66;
     return Array.from({ length: DUCKS }, () => {
       const holder = new Group();
       holder.name = "Duck";
-      const g = scene.clone(true);
-      g.scale.setScalar(s);
-      g.position.y = 1.541 * s - DUCK_HEIGHT * 0.22;
-      g.traverse((o) => o.isMesh && o.layers.enable(REFLECT_LAYER));
-      holder.add(g);
+      const { obj } = fitModel(scene.clone(true), { height: DUCK_HEIGHT });
+      obj.position.y = -DUCK_HEIGHT * 0.22; // sit a little into the water
+      obj.traverse((o) => o.isMesh && o.layers.enable(REFLECT_LAYER));
+      holder.add(obj);
       holder.visible = false;
       return holder;
     });
@@ -245,9 +262,8 @@ function Lanterns() {
       if (src) {
         const m = new Mesh(src.geometry, src.material);
         m.layers.enable(REFLECT_LAYER);
-        obj.add(m);
+        obj.add(fitModel(m, { size: 0.6 }).obj);
       }
-      obj.scale.setScalar(2.2); // ~57 cm across
       obj.visible = false;
       return { obj, angle: (i / 6) * Math.PI * 2 + rand(-0.25, 0.25), radius: rand(0.55, 2.6), speed: rand(0.008, 0.018), phase: rand(0, 6.28) };
     });
@@ -279,17 +295,22 @@ function Lanterns() {
 
 /* ---------------- night: koi jumps ---------------- */
 
-// the koi model's nose points along -x after its own root rotation; flip if it jumps tail first
-const KOI_YAW = Math.PI;
+// flip to Math.PI if the koi jumps tail first
+const KOI_YAW = 0;
 
 function Koi() {
   const { scene, animations } = useGLTF(PROPS + "koi_fish.glb");
-  const fish = useMemo(() => {
+  const { fish, fitted } = useMemo(() => {
     const obj = scene.clone(true);
     obj.traverse((o) => o.isMesh && (o.frustumCulled = false));
-    return obj;
+    const f = fitModel(obj, { size: 0.55 });
+    // lay the fish's long axis along +x of the jump frame
+    if (f.dims.z > f.dims.x) f.obj.rotation.y = Math.PI / 2;
+    f.obj.position.y = -f.dims.y / 2;
+    return { fish: obj, fitted: f.obj };
   }, [scene]);
   const holder = useRef();
+  const pitch = useRef();
   useEffect(() => {
     if (holder.current) holder.current.name = "Koi";
   }, []);
@@ -324,7 +345,7 @@ function Koi() {
       const y = WATER_Y - 0.08 + Math.sin(k * Math.PI) * 0.55;
       g.position.set(x, y, z);
       g.rotation.set(0, Math.atan2(-(j.to.z - j.from.z), j.to.x - j.from.x), 0);
-      fish.rotation.z = Math.cos(k * Math.PI) * 0.9; // nose up, then down
+      if (pitch.current) pitch.current.rotation.z = Math.cos(k * Math.PI) * 0.9; // nose up, then down
       g.visible = true;
       if (k >= 1) {
         addRipple(j.to.x, j.to.z, 1.3);
@@ -335,8 +356,10 @@ function Koi() {
   });
   return (
     <group ref={holder} visible={false}>
-      <group scale={0.07} rotation={[0, KOI_YAW, 0]}>
-        <primitive object={fish} />
+      <group ref={pitch}>
+        <group rotation={[0, KOI_YAW, 0]}>
+          <primitive object={fitted} />
+        </group>
       </group>
     </group>
   );
@@ -404,7 +427,14 @@ function Fireflies() {
     mat.uniforms.uAlpha.value = Math.max(0, live.night - 0.3) / 0.7;
     mat.uniforms.uSize.value = 55 * gl.getPixelRatio() * (size.height / 900);
   });
-  return <points geometry={geo} material={mat} frustumCulled={false} />;
+  const pts = useRef();
+  useEffect(() => {
+    const o = pts.current;
+    if (!o) return;
+    renderFlags.hideInPrepass.set(o, () => true);
+    return () => renderFlags.hideInPrepass.delete(o);
+  }, []);
+  return <points ref={pts} geometry={geo} material={mat} frustumCulled={false} />;
 }
 
 /* ---------------- lights for the props ---------------- */

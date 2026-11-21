@@ -25,6 +25,8 @@ import { HOTSPOTS, ROOM_BASE } from "./roomConfig.js";
 import { MOBILE } from "./device.js";
 import RoomWorld, { REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
 import WaterLife from "./WaterLife.jsx";
+import RoomRenderer from "./RoomRenderer.jsx";
+import { renderFlags } from "./renderFlags.js";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
 import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js";
 
@@ -77,8 +79,11 @@ function loadBitmapTexture(url, anisotropy) {
     )
   );
 }
+const idle = () =>
+  new Promise((r) => (window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 250 }) : setTimeout(r, 30)));
 async function uploadTexture(gl, t) {
   if (!t) return null;
+  await idle(); // upload in the browser's quiet moments
   await nextFrame();
   gl.initTexture(t);
   return t;
@@ -439,6 +444,10 @@ function Room({ manifest, onHotspot }) {
     const c = bb.getCenter(new Vector3());
     const offset = new Vector3(-c.x, FLOOR_Y - bb.min.y, -c.z);
 
+    // transparent bits stay out of the depth pre-pass
+    nightOnly.forEach((n) => renderFlags.hideInPrepass.set(n.mesh, () => true));
+    if (chair) renderFlags.hideInPrepass.set(chair.mesh, () => chair.opacity < 0.98);
+
     // lowest world point of the plain (non-shader) meshes, for the reveal sweep
     const lowY = (mesh) => new Box3().setFromObject(mesh).min.y + offset.y;
     lit.forEach((l) => (l.minY = lowY(l.mesh)));
@@ -590,6 +599,9 @@ function Room({ manifest, onHotspot }) {
         await nextFrame();
         if (t && t.image && !t.isVideoTexture) gl.initTexture(t);
       }
+      // opening in a night mood: have the night textures on the GPU before the
+      // print-out, so nothing uploads while it runs
+      while (alive && getRoomState().preset !== "day" && !room.nightLoaded) await nextFrame();
       await nextFrame();
       gl.compile(rootScene, camera);
       let steady = 0;
@@ -625,6 +637,7 @@ function Room({ manifest, onHotspot }) {
     const I = live.intro;
 
     if (room.warm && room.revealT < REVEAL_TIME) room.revealT = Math.min(REVEAL_TIME, room.revealT + dt);
+    renderFlags.revealing = room.revealT < REVEAL_TIME;
     const rk = room.revealT / REVEAL_TIME;
     const re = rk < 0.5 ? 4 * rk * rk * rk : 1 - Math.pow(-2 * rk + 2, 3) / 2;
     REVEAL.value = rk >= 1 ? 10 : REVEAL_FROM + (REVEAL_TO - REVEAL_FROM) * re;
@@ -987,6 +1000,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         maxAzimuthAngle={0.05}
         rotateSpeed={0.5}
       />
+      <RoomRenderer />
       <RoomWorld />
       <WaterLife />
       <Suspense fallback={null}>{manifest && <Room manifest={manifest} onHotspot={onHotspot} />}</Suspense>
