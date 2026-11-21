@@ -7,6 +7,7 @@ import {
   Color,
   DoubleSide,
   Group,
+  LoadingManager,
   Mesh,
   MeshBasicMaterial,
   Quaternion,
@@ -33,16 +34,24 @@ import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js"
 const FLOOR_Y = -1.3;
 const TARGET = new Vector3(0, -0.6, 0);
 const HOME = { azimuth: -0.62, polar: 0.98, distance: 4.4 };
-const INTRO = { azimuth: -1.15, polar: 1.25, distance: 13 };
+// Before Enter: the whole room, framed on the right so the landing text has room
+const INTRO = { azimuth: -0.5, polar: 1.02, distance: 6.6 };
+const INTRO_SHIFT = new Vector3(-1.3, 0.1, 0);
+// How bright the room is while it waits behind the landing card
+const PRE = { day: 0.55, base: 0.5, layers: 0.18 };
 const DESKTOP_ASPECT = 1.6;
 const Y_AXIS = new Vector3(0, 1, 0);
 const EXPOSURE = Math.pow(2, 0.5); // fitted against the Cycles night bake
 const CONTRAST = 0.55;
 
-function prepTexture(t) {
+// Things that load after the room is on screen use their own manager, so the
+// landing progress bar (drei useProgress) only counts what the first view needs.
+const lateManager = new LoadingManager();
+
+function prepTexture(t, anisotropy = 8) {
   t.flipY = false; // glTF UV convention
   t.colorSpace = SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = anisotropy;
   return t;
 }
 
@@ -93,12 +102,8 @@ const bakedFragment = /* glsl */ `
   uniform sampler2D uDay;
   uniform sampler2D uBase;
   uniform sampler2D uAlbedo;
-  uniform sampler2D uL0;
-  uniform sampler2D uL1;
-  uniform sampler2D uL2;
-  uniform sampler2D uL3;
-  uniform sampler2D uL4;
-  uniform sampler2D uL5;
+  uniform sampler2D uLA; // light layers 0-2 packed in r, g, b
+  uniform sampler2D uLB; // light layers 3-5
   uniform float uNight;
   uniform float uDayGain;
   uniform float uBaseK;
@@ -112,12 +117,10 @@ const bakedFragment = /* glsl */ `
     vec3 col = day;
     if (uNight > 0.001) {
       vec3 albedo = texture2D(uAlbedo, vUv).rgb;
-      vec3 light = uCol[0] * texture2D(uL0, vUv).r
-                 + uCol[1] * texture2D(uL1, vUv).r
-                 + uCol[2] * texture2D(uL2, vUv).r
-                 + uCol[3] * texture2D(uL3, vUv).r
-                 + uCol[4] * texture2D(uL4, vUv).r
-                 + uCol[5] * texture2D(uL5, vUv).r;
+      vec3 la = texture2D(uLA, vUv).rgb;
+      vec3 lb = texture2D(uLB, vUv).rgb;
+      vec3 light = uCol[0] * la.r + uCol[1] * la.g + uCol[2] * la.b
+                 + uCol[3] * lb.r + uCol[4] * lb.g + uCol[5] * lb.b;
       vec3 hdr = texture2D(uBase, vUv).rgb * uBaseK + albedo * light;
       col = mix(day, agx(hdr * uExposure), uNight);
     }
@@ -154,7 +157,8 @@ function bakedMaterial(day, blank) {
     uContrast: { value: CONTRAST },
     uCol: { value: LAYER_NAMES.map(() => new Vector3()) },
   };
-  LAYER_NAMES.forEach((_, i) => (u["uL" + i] = { value: blank }));
+  u.uLA = { value: blank };
+  u.uLB = { value: blank };
   return new ShaderMaterial({ uniforms: u, vertexShader: vertex, fragmentShader: bakedFragment, side: DoubleSide });
 }
 
@@ -205,6 +209,7 @@ function sampleGradient(stops, t) {
 /* ---------- the room ---------- */
 
 function Room({ manifest, onHotspot }) {
+  const { gl } = useThree();
   const { scene } = useGLTF(ROOM_BASE + manifest.glb, true);
   const dayTextures = useLoader(
     TextureLoader,
@@ -215,7 +220,7 @@ function Room({ manifest, onHotspot }) {
 
   const room = useMemo(() => {
     if (scene.userData.room) return scene.userData.room;
-    const blank = prepTexture(new TextureLoader().load(ROOM_BASE + "black.png"));
+    const blank = prepTexture(new TextureLoader(lateManager).load(ROOM_BASE + "black.png"));
     const baked = [];
     const glows = [];
     const lit = [];
@@ -257,7 +262,7 @@ function Room({ manifest, onHotspot }) {
         map.flipY = false;
         map.colorSpace = SRGBColorSpace;
       } else {
-        map = prepTexture(new TextureLoader().load(ROOM_BASE + s.image));
+        map = prepTexture(new TextureLoader(lateManager).load(ROOM_BASE + s.image));
       }
       const mat = new MeshBasicMaterial({ map, toneMapped: false });
       mesh.material = mat;
@@ -315,7 +320,14 @@ function Room({ manifest, onHotspot }) {
         const box = new Mesh(new BoxGeometry(size.x + 0.02, size.y + 0.02, size.z + 0.02), hitMat);
         box.position.copy(center);
         box.userData.key = h.key;
-        return { key: h.key, box, center, radius: size.length() / 2 };
+        return {
+          key: h.key,
+          box,
+          center,
+          radius: size.length() / 2,
+          cam: h.cam ? new Vector3().fromArray(h.cam) : null,
+          look: h.look ? new Vector3().fromArray(h.look) : null,
+        };
       });
 
     // Centre the room on the origin with the floor at FLOOR_Y
@@ -332,38 +344,66 @@ function Room({ manifest, onHotspot }) {
   useEffect(() => {
     setRoomState({
       hotspotWorld: Object.fromEntries(
-        room.hotspots.map((h) => [h.key, { center: h.center.clone().add(room.offset), radius: h.radius }])
+        room.hotspots.map((h) => [
+          h.key,
+          {
+            center: h.center.clone().add(room.offset),
+            radius: h.radius,
+            cam: h.cam && h.cam.clone().add(room.offset),
+            look: h.look && h.look.clone().add(room.offset),
+          },
+        ])
       ),
     });
   }, [room]);
 
-  // Night textures stream in after the room is visible
+  // Night textures: fetched only once a night mood is picked (or the intro has
+  // finished and the page is idle), then uploaded to the GPU one per frame so
+  // there is never a long freeze.
+  const { introPlayed } = useRoomState();
+  const wantNight = (preset && preset !== "day") || introPlayed;
   useEffect(() => {
     if (room.nightLoaded) {
       setNightReady(true);
       return;
     }
-    let cancelled = false;
-    const loader = new TextureLoader();
+    if (!wantNight || room.nightLoading) return;
+    room.nightLoading = true;
+    const loader = new TextureLoader(lateManager);
+    const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
     const load = (url) =>
-      new Promise((res) => loader.load(ROOM_BASE + url, (t) => res(prepTexture(t)), undefined, () => res(null)));
+      new Promise((res) =>
+        loader.load(ROOM_BASE + url, (t) => res(prepTexture(t, 4)), undefined, () => res(null))
+      );
+    const upload = async (t) => {
+      if (!t) return null;
+      await nextFrame();
+      gl.initTexture(t);
+      return t;
+    };
+    const delay = preset && preset !== "day" ? 0 : 1500;
+    let fired = false;
     const id = setTimeout(async () => {
+      fired = true;
       for (const { mat, night } of room.baked) {
-        const [base, albedo, ...layers] = await Promise.all([night.base, night.albedo, ...night.layers].map(load));
-        if (base) mat.uniforms.uBase.value = base;
-        if (albedo) mat.uniforms.uAlbedo.value = albedo;
-        layers.forEach((t, i) => t && (mat.uniforms["uL" + i].value = t));
+        const tex = await Promise.all([night.base, night.albedo, ...night.layers].map(load));
+        const up = [];
+        for (const t of tex) up.push(await upload(t));
+        if (up[0]) mat.uniforms.uBase.value = up[0];
+        if (up[1]) mat.uniforms.uAlbedo.value = up[1];
+        if (up[2]) mat.uniforms.uLA.value = up[2];
+        if (up[3]) mat.uniforms.uLB.value = up[3];
         mat.userData.kBase = night.kBase;
         mat.userData.k = night.k;
       }
       room.nightLoaded = true;
-      if (!cancelled) setNightReady(true);
-    }, 300);
+      setNightReady(true);
+    }, delay);
     return () => {
-      cancelled = true;
       clearTimeout(id);
+      if (!fired) room.nightLoading = false;
     };
-  }, [room]);
+  }, [room, wantNight]);
 
   useEffect(() => {
     setPresetTarget(preset);
@@ -470,11 +510,40 @@ function poseFromSpherical(s, pullBack) {
   return new Vector3().setFromSpherical(sph).add(TARGET);
 }
 
-function focusPose(key, spot) {
+const UP = new Vector3(0, 1, 0);
+const HALF_FOV = Math.tan((45 / 2) * (Math.PI / 180));
+
+// Focus shots were designed in Blender (clear line of sight, object framed).
+// On wide screens the object is pushed right of centre so the info card on the
+// left doesn't cover it.
+function focusPose(key, spot, aspect, pullBack) {
   const cfg = HOTSPOTS[key];
-  const dir = new Vector3().fromArray(cfg.view || [-1, 0.4, 0.3]).normalize();
-  const dist = cfg.distance ?? spot.radius * 2.4 + 0.45;
-  return { pos: spot.center.clone().addScaledVector(dir, dist), target: spot.center.clone() };
+  let pos;
+  let look;
+  if (spot.cam && spot.look) {
+    look = spot.look.clone();
+    pos = look.clone().add(spot.cam.clone().sub(look).multiplyScalar(pullBack));
+  } else {
+    const dir = new Vector3().fromArray(cfg.view || [-1, 0.4, 0.3]).normalize();
+    look = spot.center.clone();
+    pos = look.clone().addScaledVector(dir, (cfg.distance ?? spot.radius * 2.4 + 0.45) * pullBack);
+  }
+  const shift = cfg.title && aspect > 1.2 ? cfg.shift ?? 0.28 : 0;
+  if (shift) {
+    const fwd = look.clone().sub(pos);
+    const d = fwd.length();
+    const right = fwd.normalize().cross(UP).normalize();
+    look.addScaledVector(right, -shift * d * HALF_FOV * aspect);
+  }
+  return { pos, target: look };
+}
+
+// Pre-Enter framing: whole room on the right, landing text on the left
+function introPose(aspect, pullBack) {
+  const target = TARGET.clone();
+  if (aspect > 1.2) target.add(INTRO_SHIFT);
+  const sph = new Spherical(INTRO.distance * pullBack, INTRO.polar, INTRO.azimuth);
+  return { pos: new Vector3().setFromSpherical(sph).add(target), target };
 }
 
 export default function BakedRoomScene({ onEnterMacbook }) {
@@ -486,6 +555,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   const introDone = useRef(false);
   const lightIntro = useRef(null);
   const saved = useRef(null);
+  const hold = useRef(null); // focus pose kept while a card is open
   const tmpTarget = useMemo(() => new Vector3(), []);
 
   const pullBack = Math.min(Math.max(1, DESKTOP_ASPECT / (size.width / size.height)), 2.2);
@@ -503,7 +573,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
     };
   }
 
-  // Before the visitor presses Enter the camera waits far outside, room dark.
+  // Before the visitor presses Enter the whole room waits, dimmed, behind the landing card.
   // Coming back from the MacBook the intro is skipped.
   useEffect(() => {
     if (getRoomState().introPlayed) {
@@ -516,9 +586,14 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (controls.current) controls.current.target.copy(TARGET);
       return;
     }
-    camera.position.copy(poseFromSpherical(INTRO, pullBack));
-    camera.lookAt(TARGET);
-    if (controls.current) controls.current.target.copy(TARGET);
+    const I = live.intro;
+    I.day = PRE.day;
+    I.base = PRE.base;
+    I.layers.fill(PRE.layers);
+    const pose = introPose(size.width / size.height, pullBack);
+    camera.position.copy(pose.pos);
+    camera.lookAt(pose.target);
+    if (controls.current) controls.current.target.copy(pose.target);
   }, []);
 
   // Enter: fly in, then switch the lights on one by one
@@ -536,16 +611,24 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (!saved.current && controls.current) {
         saved.current = { pos: camera.position.clone(), target: controls.current.target.clone() };
       }
-      const pose = focusPose(focus, spots[focus]);
+      const pose = focusPose(focus, spots[focus], size.width / size.height, pullBack);
       if (HOTSPOTS[focus].action === "macbook") {
-        startTween(pose, 1.6, () => {
-          saved.current = null;
-          onEnterMacbook && onEnterMacbook();
+        // frame the MacBook, then push in close before the scene change
+        const close = {
+          pos: pose.target.clone().lerp(pose.pos, 0.35),
+          target: pose.target.clone(),
+        };
+        startTween(pose, 1.4, () => {
+          startTween(close, 0.9, () => {
+            saved.current = null;
+            onEnterMacbook && onEnterMacbook();
+          });
         });
       } else {
         startTween(pose, 1.3, () => {});
       }
     } else if (!focus && saved.current) {
+      hold.current = null;
       startTween(saved.current, 1.2, () => {});
       saved.current = null;
     }
@@ -575,10 +658,18 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (ctl) ctl.target.copy(tmpTarget);
       if (tw.t >= 1) {
         tween.current = null;
+        if (getRoomState().focus) hold.current = tw.to;
         tw.onDone();
       }
     }
     const st = getRoomState();
+    // OrbitControls clamps distance/angles even when disabled, so a focus pose
+    // closer than minDistance is re-applied here every frame.
+    if (!tween.current && hold.current && st.focus) {
+      camera.position.copy(hold.current.pos);
+      camera.lookAt(hold.current.target);
+      if (ctl) ctl.target.copy(hold.current.target);
+    }
     if (ctl) ctl.enabled = !tween.current && !st.focus && st.started;
 
     // intro lights: day fades in; at night each layer switches on in turn
@@ -586,11 +677,12 @@ export default function BakedRoomScene({ onEnterMacbook }) {
     if (lightIntro.current !== null) {
       lightIntro.current += dt;
       const t = lightIntro.current - 1.4; // start while the camera is still flying in
-      I.day = Math.min(1, Math.max(0, t / 1.6));
-      I.base = Math.min(1, Math.max(0, t / 1.2));
+      const ramp = (from, x) => from + (1 - from) * Math.min(1, Math.max(0, x));
+      I.day = ramp(PRE.day, t / 1.6);
+      I.base = ramp(PRE.base, t / 1.2);
       const order = [5, 2, 1, 0, 4, 3]; // sofa, under desk, desk wall, nanoleaf, lamps, ceiling
       order.forEach((li, n) => {
-        I.layers[li] = Math.min(1, Math.max(0, (t - 0.5 - n * 0.35) / 0.45));
+        I.layers[li] = ramp(PRE.layers, (t - 0.5 - n * 0.35) / 0.45);
       });
       if (t > 4) lightIntro.current = null;
     }
@@ -622,7 +714,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         enableDamping
         dampingFactor={0.08}
         minDistance={2}
-        maxDistance={7 * pullBack}
+        maxDistance={started ? 7 * pullBack : 40}
         minPolarAngle={0.45}
         maxPolarAngle={1.35}
         minAzimuthAngle={-1.45}

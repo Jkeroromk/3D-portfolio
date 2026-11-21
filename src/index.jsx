@@ -7,6 +7,7 @@ import Experience from "./Experience.jsx";
 import RoomScene from "./room/BakedRoom.jsx";
 import RoomOverlay from "./room/RoomOverlay.jsx";
 import Shadow from "./Components/Shadow.jsx";
+import PerfStats from "./room/PerfStats.jsx";
 import { setRoomState, useRoomState } from "./room/roomStore.js";
 
 const root = ReactDOM.createRoot(document.querySelector("#root"));
@@ -20,14 +21,19 @@ function App() {
   const [fading, setFading] = useState(false);
   const [macZoomed, setMacZoomed] = useState(false);
   const busy = useRef(false);
-  const { ready } = useRoomState();
 
   // Load the MacBook scene in the background once the room is up, so the jump is instant
+  const { introPlayed } = useRoomState();
   useEffect(() => {
-    if (!ready) return;
-    useGLTF.preload("/models/macbook/model.gltf");
-    useGLTF.preload("/models/cybertruck/model.gltf");
-  }, [ready]);
+    if (!introPlayed) return;
+    // wait until the intro is over and the browser is idle, so it never stutters the fly-in
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    const id = idle(() => {
+      useGLTF.preload("/models/macbook/model.gltf");
+      useGLTF.preload("/models/cybertruck/model.gltf");
+    });
+    return () => (window.cancelIdleCallback || clearTimeout)(id);
+  }, [introPlayed]);
 
   const switchTo = (next) => {
     if (busy.current) return;
@@ -66,11 +72,12 @@ function App() {
       <div className={`scene-fade ${fading ? "scene-fade--on" : ""}`} />
       <Canvas
         className="r3f"
-        gl={{ alpha: true, antialias: true }}
-        dpr={[1, 2]}
+        gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
+        dpr={[1, 1.5]}
         camera={{ fov: 45, near: 0.1, far: 2000, position: [-3, 1.5, 4] }}
         shadows={mode === "macbook"}
       >
+        <PerfStats />
         <Suspense fallback={null}>
           {mode === "room" ? (
             <RoomScene onEnterMacbook={() => switchTo("macbook")} />

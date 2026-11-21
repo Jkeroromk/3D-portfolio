@@ -32,7 +32,11 @@ function useAmbientCss() {
 function Landing() {
   const { ready, started } = useRoomState();
   const { progress } = useProgress();
-  const pct = ready ? 100 : Math.min(99, Math.round(progress));
+  // drei counts every file the loader has queued so far; files queued later
+  // (Draco decoder, textures) make the raw number dip, so only ever move forward
+  const shown = useRef(0);
+  shown.current = Math.max(shown.current, Math.min(99, Math.round(progress)));
+  const pct = ready ? 100 : shown.current;
   return (
     <div className={`room-landing ${started ? "room-landing--gone" : ""}`} aria-hidden={started}>
       <div className="room-landing__inner">

@@ -8,12 +8,8 @@
     "base": "night/Room_base.jpg",
     "albedo": "night/Room_albedo.jpg",
     "layers": [
-     "night/Room_nano.jpg",
-     "night/Room_deskwall.jpg",
-     "night/Room_underdesk.jpg",
-     "night/Room_ceiling.jpg",
-     "night/Room_lamps.jpg",
-     "night/Room_sofa.jpg"
+     "night/Room_layersA.jpg",
+     "night/Room_layersB.jpg"
     ],
     "kBase": 0.017574,
     "k": [
@@ -33,12 +29,8 @@
     "base": "night/Sofa_base.jpg",
     "albedo": "night/Sofa_albedo.jpg",
     "layers": [
-     "night/Sofa_nano.jpg",
-     "night/Sofa_deskwall.jpg",
-     "night/Sofa_underdesk.jpg",
-     "night/Sofa_ceiling.jpg",
-     "night/Sofa_lamps.jpg",
-     "night/Sofa_sofa.jpg"
+     "night/Sofa_layersA.jpg",
+     "night/Sofa_layersB.jpg"
     ],
     "kBase": 0.007889,
     "k": [
@@ -58,12 +50,8 @@
     "base": "night/Decor_base.jpg",
     "albedo": "night/Decor_albedo.jpg",
     "layers": [
-     "night/Decor_nano.jpg",
-     "night/Decor_deskwall.jpg",
-     "night/Decor_underdesk.jpg",
-     "night/Decor_ceiling.jpg",
-     "night/Decor_lamps.jpg",
-     "night/Decor_sofa.jpg"
+     "night/Decor_layersA.jpg",
+     "night/Decor_layersB.jpg"
     ],
     "kBase": 0.016199,
     "k": [
@@ -83,12 +71,8 @@
     "base": "night/Desk_base.jpg",
     "albedo": "night/Desk_albedo.jpg",
     "layers": [
-     "night/Desk_nano.jpg",
-     "night/Desk_deskwall.jpg",
-     "night/Desk_underdesk.jpg",
-     "night/Desk_ceiling.jpg",
-     "night/Desk_lamps.jpg",
-     "night/Desk_sofa.jpg"
+     "night/Desk_layersA.jpg",
+     "night/Desk_layersB.jpg"
     ],
     "kBase": 0.293273,
     "k": [
@@ -108,12 +92,8 @@
     "base": "night/PC_base.jpg",
     "albedo": "night/PC_albedo.jpg",
     "layers": [
-     "night/PC_nano.jpg",
-     "night/PC_deskwall.jpg",
-     "night/PC_underdesk.jpg",
-     "night/PC_ceiling.jpg",
-     "night/PC_lamps.jpg",
-     "night/PC_sofa.jpg"
+     "night/PC_layersA.jpg",
+     "night/PC_layersB.jpg"
     ],
     "kBase": 20.408251,
     "k": [
@@ -133,12 +113,8 @@
     "base": "night/Shelf_base.jpg",
     "albedo": "night/Shelf_albedo.jpg",
     "layers": [
-     "night/Shelf_nano.jpg",
-     "night/Shelf_deskwall.jpg",
-     "night/Shelf_underdesk.jpg",
-     "night/Shelf_ceiling.jpg",
-     "night/Shelf_lamps.jpg",
-     "night/Shelf_sofa.jpg"
+     "night/Shelf_layersA.jpg",
+     "night/Shelf_layersB.jpg"
     ],
     "kBase": 0.013828,
     "k": [
@@ -158,12 +134,8 @@
     "base": "night/Lego_base.jpg",
     "albedo": "night/Lego_albedo.jpg",
     "layers": [
-     "night/Lego_nano.jpg",
-     "night/Lego_deskwall.jpg",
-     "night/Lego_underdesk.jpg",
-     "night/Lego_ceiling.jpg",
-     "night/Lego_lamps.jpg",
-     "night/Lego_sofa.jpg"
+     "night/Lego_layersA.jpg",
+     "night/Lego_layersB.jpg"
     ],
     "kBase": 0.012692,
     "k": [
@@ -183,12 +155,8 @@
     "base": "night/Chair_base.jpg",
     "albedo": "night/Chair_albedo.jpg",
     "layers": [
-     "night/Chair_nano.jpg",
-     "night/Chair_deskwall.jpg",
-     "night/Chair_underdesk.jpg",
-     "night/Chair_ceiling.jpg",
-     "night/Chair_lamps.jpg",
-     "night/Chair_sofa.jpg"
+     "night/Chair_layersA.jpg",
+     "night/Chair_layersB.jpg"
     ],
     "kBase": 0.051954,
     "k": [
@@ -219,12 +187,8 @@
     "base": "night/Fans_base.jpg",
     "albedo": "night/Fans_albedo.jpg",
     "layers": [
-     "night/Fans_nano.jpg",
-     "night/Fans_deskwall.jpg",
-     "night/Fans_underdesk.jpg",
-     "night/Fans_ceiling.jpg",
-     "night/Fans_lamps.jpg",
-     "night/Fans_sofa.jpg"
+     "night/Fans_layersA.jpg",
+     "night/Fans_layersB.jpg"
     ],
     "kBase": 0.633964,
     "k": [
@@ -271,12 +235,8 @@
     "base": "night/Blanket_base.jpg",
     "albedo": "night/Blanket_albedo.jpg",
     "layers": [
-     "night/Blanket_nano.jpg",
-     "night/Blanket_deskwall.jpg",
-     "night/Blanket_underdesk.jpg",
-     "night/Blanket_ceiling.jpg",
-     "night/Blanket_lamps.jpg",
-     "night/Blanket_sofa.jpg"
+     "night/Blanket_layersA.jpg",
+     "night/Blanket_layersB.jpg"
     ],
     "kBase": 0.013865,
     "k": [
@@ -296,12 +256,8 @@
     "base": "night/Quest_base.jpg",
     "albedo": "night/Quest_albedo.jpg",
     "layers": [
-     "night/Quest_nano.jpg",
-     "night/Quest_deskwall.jpg",
-     "night/Quest_underdesk.jpg",
-     "night/Quest_ceiling.jpg",
-     "night/Quest_lamps.jpg",
-     "night/Quest_sofa.jpg"
+     "night/Quest_layersA.jpg",
+     "night/Quest_layersB.jpg"
     ],
     "kBase": 0.017182,
     "k": [
@@ -618,6 +574,16 @@
     -0.0399,
     1.3189,
     2.055
+   ],
+   "cam": [
+    -1.3947,
+    1.2384,
+    1.379
+   ],
+   "look": [
+    -0.24,
+    1.137,
+    1.48
    ]
   },
   {
@@ -631,6 +597,16 @@
     -0.4294,
     1.412,
     0.7866
+   ],
+   "cam": [
+    -0.7481,
+    1.2386,
+    1.3434
+   ],
+   "look": [
+    -0.569,
+    1.178,
+    0.675
    ]
   },
   {
@@ -644,6 +620,16 @@
     -0.25,
     1.0055,
     2.345
+   ],
+   "cam": [
+    -0.42,
+    1.0156,
+    2.7779
+   ],
+   "look": [
+    -0.42,
+    0.8902,
+    2.31
    ]
   },
   {
@@ -657,6 +643,16 @@
     -0.7668,
     1.2077,
     0.7429
+   ],
+   "cam": [
+    -1.6586,
+    1.5105,
+    1.4873
+   ],
+   "look": [
+    -1.02,
+    0.9913,
+    0.5753
    ]
   },
   {
@@ -696,6 +692,16 @@
     -2.6451,
     0.6504,
     1.74
+   ],
+   "cam": [
+    -3.1293,
+    1.4732,
+    2.1289
+   ],
+   "look": [
+    -2.8547,
+    0.545,
+    1.5398
    ]
   },
   {
@@ -709,6 +715,16 @@
     -0.29,
     2.113,
     0.2301
+   ],
+   "cam": [
+    -0.6938,
+    2.1507,
+    0.8704
+   ],
+   "look": [
+    -0.565,
+    1.952,
+    0.14
    ]
   },
   {
@@ -722,6 +738,16 @@
     -3.02,
     1.85,
     -0.0
+   ],
+   "cam": [
+    -3.39,
+    1.6878,
+    0.9885
+   ],
+   "look": [
+    -3.39,
+    1.6,
+    -0.015
    ]
   },
   {
@@ -735,6 +761,16 @@
     -3.85,
     1.83,
     -0.0
+   ],
+   "cam": [
+    -4.05,
+    1.6613,
+    1.0285
+   ],
+   "look": [
+    -4.05,
+    1.57,
+    -0.015
    ]
   },
   {
@@ -748,6 +784,16 @@
     -2.53,
     1.83,
     -0.0
+   ],
+   "cam": [
+    -2.73,
+    1.6613,
+    1.0285
+   ],
+   "look": [
+    -2.73,
+    1.57,
+    -0.015
    ]
   }
  ]

@@ -440,10 +440,8 @@ html[data-mode="macbook"] #root {
   z-index: 9998;
   padding: 12px;
   border-radius: 18px;
-  background: rgba(12, 12, 16, 0.62);
+  background: rgba(14, 14, 18, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
   font-family: var(--ui-font);
   transition: box-shadow 0.3s ease, transform 0.3s ease;
@@ -561,11 +559,9 @@ html[data-mode="macbook"] #root {
   box-sizing: border-box;
   padding: 24px 26px 20px;
   border-radius: 18px;
-  background: rgba(12, 12, 16, 0.72);
+  background: rgba(14, 14, 18, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 3px solid var(--accent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   color: #fff;
   font-family: var(--ui-font);
   opacity: 0;
@@ -638,8 +634,6 @@ html[data-mode="macbook"] #root {
   background: rgba(20, 20, 24, 0.7);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   animation: room-fade 0.6s ease 0.8s both;
 }
 
@@ -670,8 +664,6 @@ html[data-mode="macbook"] #root {
   z-index: 9998;
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(12, 12, 16, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.85);
   font: 11px var(--ui-font);
   letter-spacing: 2px;
@@ -732,8 +724,6 @@ html[data-mode="macbook"] #root {
   inset: 0;
   z-index: 10000;
   background: rgba(10, 10, 14, 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -884,4 +874,19 @@ a.room-credits__item:hover {
   .room-credits__panel {
     padding: 22px 18px 18px;
   }
+}
+
+/* frame-rate readout (previews, ?perf, or the ` key) */
+.perf-stats {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10003;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #9dff9d;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+  pointer-events: none;
 }

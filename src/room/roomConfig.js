@@ -21,6 +21,7 @@ export const HOTSPOTS = {
     body: "This room, for a start: modelled and lit in Blender, baked, and running in React Three Fiber.",
     link: { text: "GitHub", url: "https://github.com/Jkeroromk" },
     view: [-1, 0.2, 0.35],
+    shift: 0.12,
   },
   MacBook: { label: "Enter my website", action: "macbook", view: [-1, 0.25, 0.1], distance: 0.55 },
   PC: {
