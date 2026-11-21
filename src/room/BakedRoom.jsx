@@ -5,6 +5,7 @@ import {
   AdditiveBlending,
   Box3,
   Color,
+  DoubleSide,
   Group,
   MeshBasicMaterial,
   Quaternion,
@@ -27,9 +28,9 @@ import { setRoomState, useRoomState } from "./roomStore.js";
  */
 
 const FLOOR_Y = -1.3;
-const TARGET = new Vector3(0, -0.55, 0);
-const START = { azimuth: -0.6, polar: 1.0, distance: 6.2 };
-const DESKTOP_ASPECT = 1.5;
+const TARGET = new Vector3(0, -0.6, 0);
+const START = { azimuth: -0.62, polar: 0.98, distance: 4.4 };
+const DESKTOP_ASPECT = 1.6;
 const Y_AXIS = new Vector3(0, 1, 0);
 
 function prepTexture(t) {
@@ -65,6 +66,7 @@ function makeBakedMaterial(day) {
     uniforms: { uDay: { value: day }, uNight: { value: day }, uMix: { value: 0 } },
     vertexShader: bakedVertex,
     fragmentShader: bakedFragment,
+    side: DoubleSide,
   });
 }
 
@@ -108,10 +110,10 @@ function Room({ manifest }) {
     const nightOnly = [];
 
     manifest.bakes.forEach((b, i) => {
-      const mesh = scene.getObjectByName(b.mesh);
-      if (!mesh) return;
+      const meshes = (b.meshes || [b.mesh]).map((n) => scene.getObjectByName(n)).filter(Boolean);
+      if (!meshes.length) return;
       const mat = makeBakedMaterial(prepTexture(dayTextures[i]));
-      mesh.material = mat;
+      meshes.forEach((m) => (m.material = mat));
       baked.push({ mat, night: ROOM_BASE + b.night });
     });
 
@@ -187,31 +189,38 @@ function Room({ manifest }) {
       o.renderOrder = 10;
     });
 
-    // Chair: the exporter wrote the seat's world transform as its local one,
-    // so lift it out of the pivot empty, put it back where it belongs, and
-    // hang it on a fresh pivot at the gas-lift axis.
+    // Chair: hang the seat on a pivot at the gas-lift axis
     let swivel = null;
     let swivelRest = null;
-    const pivotNode = scene.getObjectByName(manifest.chair || "Chair_Swivel");
     const seat = scene.getObjectByName("Bake_Chair");
-    if (pivotNode && seat) {
-      seat.removeFromParent();
-      scene.add(seat); // its local transform is its true placement
+    if (seat && manifest.chairPivot) {
       swivel = new Group();
-      swivel.name = "ChairPivot";
-      swivel.position.copy(pivotNode.position);
+      swivel.position.fromArray(manifest.chairPivot);
       scene.add(swivel);
       scene.updateMatrixWorld(true);
       swivel.attach(seat);
       swivelRest = swivel.quaternion.clone();
     }
 
+    // Fans: each rotor spins about its own axis through its hub
+    const fans = [];
+    (manifest.fans || []).forEach((f) => {
+      const rotor = scene.getObjectByName(f.mesh);
+      if (!rotor) return;
+      const pivot = new Group();
+      pivot.position.fromArray(f.center);
+      scene.add(pivot);
+      scene.updateMatrixWorld(true);
+      pivot.attach(rotor);
+      fans.push({ pivot, axis: new Vector3().fromArray(f.axis).normalize(), speed: 9 + Math.random() * 3 });
+    });
+
     // Centre the room on the origin with the floor at FLOOR_Y
     const box = new Box3().setFromObject(scene);
     const c = box.getCenter(new Vector3());
     const offset = [-c.x, FLOOR_Y - box.min.y, -c.z];
 
-    const r = { baked, lit, nightOnly, hits, swivel, swivelRest, offset, nightLoaded: false };
+    const r = { baked, lit, nightOnly, hits, swivel, swivelRest, fans, offset, nightLoaded: false };
     scene.userData.room = r;
     return r;
   }, [scene, manifest, dayTextures]);
@@ -274,6 +283,8 @@ function Room({ manifest }) {
       mesh.visible = m > 0.01;
       mesh.material.opacity = m;
     });
+
+    room.fans.forEach((f) => f.pivot.rotateOnAxis(f.axis, f.speed * delta));
 
     // Lazy back-and-forth swivel, like someone fidgeting in the chair
     if (room.swivel) {
@@ -352,7 +363,7 @@ export default function BakedRoomScene() {
     camera.lookAt(TARGET);
     if (controls.current) {
       controls.current.target.copy(TARGET);
-      controls.current.maxDistance = 9 * pullBack;
+      controls.current.maxDistance = 7 * pullBack;
       controls.current.update();
     }
   }, [camera, size.width, size.height]);
@@ -373,8 +384,8 @@ export default function BakedRoomScene() {
         enablePan={false}
         enableDamping
         dampingFactor={0.08}
-        minDistance={3}
-        maxDistance={9}
+        minDistance={2}
+        maxDistance={7}
         minPolarAngle={0.45}
         maxPolarAngle={1.35}
         minAzimuthAngle={-1.45}

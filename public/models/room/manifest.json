@@ -12,6 +12,11 @@
       "night": "bake/Sofa_night.jpg"
     },
     {
+      "mesh": "Bake_Decor",
+      "day": "bake/Decor_day.jpg",
+      "night": "bake/Decor_night.jpg"
+    },
+    {
       "mesh": "Bake_Desk",
       "day": "bake/Desk_day.jpg",
       "night": "bake/Desk_night.jpg"
@@ -27,14 +32,40 @@
       "night": "bake/Shelf_night.jpg"
     },
     {
+      "mesh": "Bake_Lego",
+      "day": "bake/Lego_day.jpg",
+      "night": "bake/Lego_night.jpg"
+    },
+    {
       "mesh": "Bake_Chair",
       "day": "bake/Chair_day.jpg",
       "night": "bake/Chair_night.jpg"
     },
     {
-      "mesh": "Bake_Lego",
-      "day": "bake/Lego_day.jpg",
-      "night": "bake/Lego_night.jpg"
+      "meshes": [
+        "WFan_fan1_001_14",
+        "WFan_fan1_002_15",
+        "WFan_fan1_0",
+        "WFan_SL120_3",
+        "WFan_SL120_4",
+        "WFan_SL120_5",
+        "WFan_SL120_6",
+        "WFan_SL120_7",
+        "WFan_SL120_8",
+        "WFan_SL120_9"
+      ],
+      "day": "bake/Fans_day.jpg",
+      "night": "bake/Fans_night.jpg"
+    },
+    {
+      "mesh": "Bake_Glow",
+      "day": "bake/Glow_day.jpg",
+      "night": "bake/Glow_night.jpg"
+    },
+    {
+      "mesh": "Bake_Blanket",
+      "day": "bake/Blanket_day.jpg",
+      "night": "bake/Blanket_night.jpg"
     }
   ],
   "screens": [
@@ -81,5 +112,141 @@
       ]
     }
   ],
-  "chair": "Chair_Swivel"
+  "chairPivot": [
+    -1.1776,
+    0.4,
+    1.46159
+  ],
+  "fans": [
+    {
+      "mesh": "WFan_SL120_3",
+      "center": [
+        -1.16013,
+        1.18462,
+        0.55581
+      ],
+      "axis": [
+        4e-05,
+        1.0,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_SL120_4",
+      "center": [
+        -1.03113,
+        1.18462,
+        0.55581
+      ],
+      "axis": [
+        4e-05,
+        1.0,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_SL120_5",
+      "center": [
+        -0.90213,
+        1.18462,
+        0.55581
+      ],
+      "axis": [
+        4e-05,
+        1.0,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_SL120_6",
+      "center": [
+        -1.1467,
+        0.82379,
+        0.63322
+      ],
+      "axis": [
+        4e-05,
+        1.0,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_SL120_7",
+      "center": [
+        -1.0177,
+        0.82379,
+        0.63322
+      ],
+      "axis": [
+        4e-05,
+        1.0,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_SL120_8",
+      "center": [
+        -0.8887,
+        0.82379,
+        0.63322
+      ],
+      "axis": [
+        4e-05,
+        1.0,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_SL120_9",
+      "center": [
+        -0.7878,
+        0.91763,
+        0.66779
+      ],
+      "axis": [
+        1.0,
+        -4e-05,
+        -0.0003
+      ]
+    },
+    {
+      "mesh": "WFan_fan1_0",
+      "center": [
+        -1.19932,
+        0.87795,
+        0.48423
+      ],
+      "axis": [
+        0.00048,
+        -0.0001,
+        -1.0
+      ]
+    },
+    {
+      "mesh": "WFan_fan1_001_14",
+      "center": [
+        -1.19932,
+        0.99962,
+        0.48423
+      ],
+      "axis": [
+        0.00048,
+        -0.0001,
+        -1.0
+      ]
+    },
+    {
+      "mesh": "WFan_fan1_002_15",
+      "center": [
+        -1.19932,
+        1.12048,
+        0.48423
+      ],
+      "axis": [
+        0.00048,
+        -0.0001,
+        -1.0
+      ]
+    }
+  ]
 }
