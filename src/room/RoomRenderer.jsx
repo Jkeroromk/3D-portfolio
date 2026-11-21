@@ -55,6 +55,7 @@ export default function RoomRenderer() {
       if (p.slow > 1500 && p.dpr > 0.75) {
         p.dpr = Math.max(0.75, +(p.dpr - 0.15).toFixed(2));
         setDpr(p.dpr);
+        console.log("[dpr]", p.dpr, "down during", renderFlags.phase);
         p.slow = 0;
       }
     } else if (p.avg < 15.5 || (p.avg < 17.6 && p.dpr < maxDpr)) {
@@ -63,11 +64,18 @@ export default function RoomRenderer() {
       if (p.fast > 5000 && p.dpr < maxDpr) {
         p.dpr = Math.min(maxDpr, +(p.dpr + 0.1).toFixed(2));
         setDpr(p.dpr);
+        console.log("[dpr]", p.dpr, "up during", renderFlags.phase);
         p.fast = 0;
       }
     }
 
     // --- draw
+    const c0 = performance.now();
+    draw(scene, camera);
+    renderFlags.cpuMs = performance.now() - c0;
+  }, 1);
+
+  function draw(scene, camera) {
     const usePrepass = !MOBILE && live.night > 0.02 && !renderFlags.revealing;
     if (!usePrepass) {
       gl.autoClear = true;
@@ -90,7 +98,7 @@ export default function RoomRenderer() {
     renderFlags.prepass = false;
     hidden.forEach((o) => (o.visible = true));
     gl.render(scene, camera);
-  }, 1);
+  }
 
   return null;
 }

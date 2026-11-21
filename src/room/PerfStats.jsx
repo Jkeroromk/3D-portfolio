@@ -1,5 +1,48 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
+import { renderFlags } from "./renderFlags.js";
+
+// Per-phase summary (print, swing, enter, zoom-in, ...) and every long frame,
+// with what changed on the GPU side during it, so hitches can be traced.
+function phaseTracker(gl) {
+  const t = { phase: renderFlags.phase, times: [], last: null };
+  const snap = () => ({
+    programs: (gl.info.programs || []).length,
+    textures: gl.info.memory.textures,
+    geometries: gl.info.memory.geometries,
+    dpr: gl.getPixelRatio(),
+  });
+  let prev = snap();
+  return (ms) => {
+    const now = snap();
+    if (ms > 25) {
+      const d = {};
+      for (const k of Object.keys(now)) if (now[k] !== prev[k]) d[k] = `${prev[k]}->${now[k]}`;
+      console.log("[hitch]", JSON.stringify({ ms: +ms.toFixed(1), phase: renderFlags.phase, cpu: +renderFlags.cpuMs.toFixed(1), ...d }));
+    }
+    prev = now;
+    if (renderFlags.phase !== t.phase) {
+      if (t.times.length > 5) {
+        const sorted = [...t.times].sort((a, b) => a - b);
+        const avg = t.times.reduce((a, b) => a + b, 0) / t.times.length;
+        console.log(
+          "[phase]",
+          JSON.stringify({
+            phase: t.phase,
+            frames: t.times.length,
+            fps: Math.round(1000 / avg),
+            p95: +sorted[Math.floor(sorted.length * 0.95)].toFixed(1),
+            worst: +sorted[sorted.length - 1].toFixed(1),
+            over25: t.times.filter((x) => x > 25).length,
+          })
+        );
+      }
+      t.phase = renderFlags.phase;
+      t.times = [];
+    }
+    t.times.push(ms);
+  };
+}
 
 // FPS / frame-time readout. On by default on Vercel preview deployments and with ?perf;
 // toggle with the ` key. Every 2 s it also logs a [perf] line to the console.
@@ -15,6 +58,7 @@ export function perfEnabledByDefault() {
 export default function PerfStats() {
   const { gl } = useThree();
   const el = useRef(null);
+  const track = useRef(null);
   const s = useRef({ frames: 0, t0: performance.now(), last: performance.now(), times: [], logT: performance.now() });
 
   useEffect(() => {
@@ -36,6 +80,8 @@ export default function PerfStats() {
   useFrame(() => {
     const now = performance.now();
     const st = s.current;
+    if (!track.current) track.current = phaseTracker(gl);
+    track.current(now - st.last);
     st.times.push(now - st.last);
     st.last = now;
     st.frames++;

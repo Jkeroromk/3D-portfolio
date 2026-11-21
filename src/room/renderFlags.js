@@ -8,4 +8,8 @@ export const renderFlags = {
   // transparent things that must not write depth in the pre-pass:
   // fn(object) -> true when it should be hidden right now
   hideInPrepass: new Map(),
+  // what the camera / room is doing right now (for the perf log only)
+  phase: "idle",
+  // CPU time spent submitting the last frame's draw calls
+  cpuMs: 0,
 };

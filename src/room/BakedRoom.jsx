@@ -824,9 +824,10 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   const pullBack = Math.min(Math.max(1, DESKTOP_ASPECT / (size.width / size.height)), 2.2);
   const home = useMemo(() => ({ pos: poseFromSpherical(HOME, pullBack), target: TARGET.clone() }), [pullBack]);
 
-  function startTween(to, duration, onDone) {
+  function startTween(to, duration, onDone, label = "tween") {
     const ctl = controls.current;
     tween.current = {
+      label,
       fromPos: camera.position.clone(),
       fromTarget: ctl ? ctl.target.clone() : TARGET.clone(),
       to,
@@ -865,14 +866,14 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   useEffect(() => {
     if (!ready || swung.current || getRoomState().introPlayed || getRoomState().started) return;
     swung.current = true;
-    startTween(introPose(size.width / size.height, pullBack), REVEAL_TIME + 0.2, () => {});
+    startTween(introPose(size.width / size.height, pullBack), REVEAL_TIME + 0.2, () => {}, "swing");
   }, [ready]);
 
   // Enter: fly in, then switch the lights on one by one
   useEffect(() => {
     if (!started || introDone.current) return;
     introDone.current = true;
-    startTween(home, 3.4, () => setRoomState({ introPlayed: true }));
+    startTween(home, 3.4, () => setRoomState({ introPlayed: true }), "enter");
     lightIntro.current = 0;
   }, [started]);
 
@@ -898,12 +899,12 @@ export default function BakedRoomScene({ onEnterMacbook }) {
           });
         });
       } else {
-        startTween(pose, 1.3, () => {});
+        startTween(pose, 1.3, () => {}, "zoom-in");
       }
     } else if (!focus && saved.current) {
       hold.current = null;
       setRoomState({ chairHidden: false });
-      startTween(saved.current, 1.2, () => {});
+      startTween(saved.current, 1.2, () => {}, "zoom-out");
       saved.current = null;
     }
   }, [focus]);
@@ -945,6 +946,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (ctl) ctl.target.copy(hold.current.target);
     }
     if (ctl) ctl.enabled = !tween.current && !st.focus && st.started;
+    renderFlags.phase = renderFlags.revealing ? "print" : tween.current ? tween.current.label : st.focus ? "focused" : "idle";
 
     // intro lights: day fades in; at night each layer switches on in turn
     const I = live.intro;
