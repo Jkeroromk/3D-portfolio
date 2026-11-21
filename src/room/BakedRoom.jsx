@@ -300,7 +300,7 @@ function sampleGradient(stops, t) {
 /* ---------- the room ---------- */
 
 function Room({ manifest, onHotspot }) {
-  const { gl } = useThree();
+  const { gl, scene: rootScene, camera } = useThree();
   const { scene } = useGLTF(ROOM_BASE + manifest.glb, true);
   const dayTextures = useLoader(
     TextureLoader,
@@ -452,6 +452,7 @@ function Room({ manifest, onHotspot }) {
       chair,
       nightLoaded: false,
       revealT: getRoomState().introPlayed ? REVEAL_TIME : 0,
+      warm: false,
     };
     scene.userData.room = r;
     return r;
@@ -564,9 +565,46 @@ function Room({ manifest, onHotspot }) {
     setPresetTarget(preset);
   }, [preset]);
 
+  // Warm-up before the room is shown: upload every texture (one per frame),
+  // compile the shaders, then wait for a few steady frames. Only then is the
+  // room "ready" and the reveal starts, so the print-out never stutters.
   useEffect(() => {
-    setRoomState({ ready: true });
-  }, []);
+    if (room.warm) {
+      setRoomState({ ready: true, warming: false });
+      return;
+    }
+    let alive = true;
+    (async () => {
+      setRoomState({ warming: true });
+      const textures = new Set();
+      room.baked.forEach((g) => textures.add(g.mat.uniforms.uDay.value));
+      room.glows.forEach((g) => textures.add(g.mesh.material.uniforms.uDay.value));
+      room.lit.forEach((l) => l.mat.map && textures.add(l.mat.map));
+      for (const t of textures) {
+        if (!alive) return;
+        await nextFrame();
+        if (t && t.image && !t.isVideoTexture) gl.initTexture(t);
+      }
+      await nextFrame();
+      gl.compile(rootScene, camera);
+      let steady = 0;
+      let last = performance.now();
+      const t0 = last;
+      while (steady < 8 && performance.now() - t0 < 2500) {
+        await nextFrame();
+        const now = performance.now();
+        steady = now - last < 24 ? steady + 1 : 0;
+        last = now;
+      }
+      await new Promise((r) => setTimeout(r, 300)); // a short beat before the print-out
+      if (!alive) return;
+      room.warm = true;
+      setRoomState({ ready: true, warming: false });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [room]);
 
   useEffect(() => {
     const wantsNight = preset && preset !== "day";
@@ -581,7 +619,7 @@ function Room({ manifest, onHotspot }) {
     const night = nightReady ? live.night : 0;
     const I = live.intro;
 
-    if (room.revealT < REVEAL_TIME) room.revealT = Math.min(REVEAL_TIME, room.revealT + dt);
+    if (room.warm && room.revealT < REVEAL_TIME) room.revealT = Math.min(REVEAL_TIME, room.revealT + dt);
     const rk = room.revealT / REVEAL_TIME;
     const re = rk < 0.5 ? 4 * rk * rk * rk : 1 - Math.pow(-2 * rk + 2, 3) / 2;
     REVEAL.value = rk >= 1 ? 10 : REVEAL_FROM + (REVEAL_TO - REVEAL_FROM) * re;

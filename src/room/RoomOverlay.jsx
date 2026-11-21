@@ -29,25 +29,61 @@ function useAmbientCss() {
   }, []);
 }
 
+function useSmoothProgress(target, done) {
+  // Moves forward smoothly, and keeps creeping while a big file is still
+  // downloading, so the bar never looks frozen. Never goes backwards.
+  const [shown, setShown] = useState(0);
+  const ref = useRef({ value: 0, target: 0, done: false });
+  ref.current.target = target;
+  ref.current.done = done;
+  useEffect(() => {
+    let raf;
+    let last = performance.now();
+    const tick = (now) => {
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      const r = ref.current;
+      if (r.done) r.value += (100 - r.value) * Math.min(1, dt * 6);
+      else {
+        const goal = Math.max(r.target, r.value);
+        if (r.value < goal) r.value += (goal - r.value) * Math.min(1, dt * 4);
+        // slow creep towards the next milestone while waiting on a file
+        const ceiling = Math.min(97, goal + (100 - goal) * 0.35);
+        r.value += Math.max(0, ceiling - r.value) * dt * 0.08;
+      }
+      setShown(r.value);
+      if (!(r.done && r.value > 99.9)) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return shown;
+}
+
 function Landing() {
-  const { ready, started } = useRoomState();
-  const { progress } = useProgress();
-  // drei counts every file the loader has queued so far; files queued later
-  // (Draco decoder, textures) make the raw number dip, so only ever move forward
-  const shown = useRef(0);
-  shown.current = Math.max(shown.current, Math.min(99, Math.round(progress)));
-  const pct = ready ? 100 : shown.current;
+  const { ready, started, warming } = useRoomState();
+  const { progress, loaded, total, active } = useProgress();
+  const shown = useSmoothProgress(Math.min(95, progress), ready);
+  const pct = ready ? 100 : Math.min(99, Math.floor(shown));
+  let status = "Loading the room";
+  if (warming) status = "Preparing the room";
+  else if (total > 1) status = `Loading textures · ${loaded} / ${total}`;
+  if (ready) status = "Ready";
   return (
     <div className={`room-landing ${started ? "room-landing--gone" : ""}`} aria-hidden={started}>
       <div className="room-landing__inner">
         <div className="room-landing__eyebrow">Jkeroro</div>
         <h1 className="room-landing__title">Welcome to my room</h1>
         <p className="room-landing__sub">Everything in here is something I use, build or love. Click around.</p>
-        <div className="room-landing__bar">
-          <div className="room-landing__fill" style={{ width: `${Math.max(3, pct)}%` }} />
+        <div className={`room-landing__bar ${ready ? "" : "room-landing__bar--busy"}`}>
+          <div className="room-landing__fill" style={{ width: `${Math.max(3, shown)}%` }} />
+        </div>
+        <div className="room-landing__status">
+          <span>{status}</span>
+          <span>{pct}%</span>
         </div>
         <button className="room-landing__enter" disabled={!ready} onClick={() => setRoomState({ started: true })}>
-          {ready ? "Enter" : `Loading ${pct}%`}
+          {ready ? "Enter" : "Loading…"}
         </button>
       </div>
     </div>

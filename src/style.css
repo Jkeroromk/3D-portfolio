@@ -357,7 +357,7 @@ html[data-mode="macbook"] #root {
 }
 
 .room-landing__bar {
-  height: 2px;
+  height: 3px;
   background: rgba(255, 255, 255, 0.14);
   border-radius: 2px;
   overflow: hidden;
@@ -365,9 +365,41 @@ html[data-mode="macbook"] #root {
 }
 
 .room-landing__fill {
+  position: relative;
   height: 100%;
   background: var(--accent);
-  transition: width 0.35s ease;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* a light sweep running along the bar while loading, so it never looks frozen */
+.room-landing__bar--busy .room-landing__fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.85) 50%, transparent 100%);
+  background-size: 60px 100%;
+  background-repeat: no-repeat;
+  animation: room-bar-sweep 1.1s linear infinite;
+}
+
+@keyframes room-bar-sweep {
+  from {
+    background-position: -60px 0;
+  }
+  to {
+    background-position: calc(100% + 60px) 0;
+  }
+}
+
+.room-landing__status {
+  display: flex;
+  justify-content: space-between;
+  margin: -12px 0 22px;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
 }
 
 .room-landing__enter {
