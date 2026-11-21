@@ -66,6 +66,11 @@
       "mesh": "Bake_Blanket",
       "day": "bake/Blanket_day.jpg",
       "night": "bake/Blanket_night.jpg"
+    },
+    {
+      "mesh": "Bake_Quest",
+      "day": "bake/Quest_day.jpg",
+      "night": "bake/Quest_night.jpg"
     }
   ],
   "screens": [
