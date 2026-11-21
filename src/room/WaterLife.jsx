@@ -301,7 +301,7 @@ function Orbs() {
   const items = useMemo(() => {
     const geo = new SphereGeometry(1, 32, 20);
     return Array.from({ length: ORBS }, (_, i) => {
-      const r = rand(0.055, 0.09);
+      const r = rand(0.08, 0.12);
       const mat = new ShaderMaterial({
         uniforms: { uColor: { value: new Color(1, 1, 1) }, uGain: { value: 1 } },
         vertexShader: orbVertex,
@@ -314,7 +314,7 @@ function Orbs() {
       const halo = new Sprite(
         new SpriteMaterial({ map: getHalo(), blending: AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false })
       );
-      halo.scale.setScalar(r * 7);
+      halo.scale.setScalar(r * 9);
       halo.layers.enable(REFLECT_LAYER);
       const obj = new Group();
       obj.add(ball, halo);
@@ -368,9 +368,9 @@ function Orbs() {
       const gain = (pulse + it.flare * 1.5) * f;
       it.ball.material.uniforms.uColor.value.setRGB(c[0], c[1], c[2]);
       it.ball.material.uniforms.uGain.value = gain;
-      it.halo.material.color.setRGB(c[0], c[1], c[2]).multiplyScalar(0.55 * gain);
-      it.halo.scale.setScalar(it.r * (7 + it.flare * 5));
-      lanternGlow[i].set(tmp.x, tmp.z, gain * live.night * 0.6);
+      it.halo.material.color.setRGB(c[0], c[1], c[2]).multiplyScalar(1.0 * gain);
+      it.halo.scale.setScalar(it.r * (9 + it.flare * 6));
+      lanternGlow[i].set(tmp.x, tmp.z, gain * live.night * 1.0);
       lanternColor[i].set(c[0], c[1], c[2]);
     });
   });
