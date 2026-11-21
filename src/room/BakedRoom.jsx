@@ -28,7 +28,7 @@ import WaterLife from "./WaterLife.jsx";
 import RoomRenderer from "./RoomRenderer.jsx";
 import { renderFlags, REVEAL } from "./renderFlags.js";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
-import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js";
+import { LAYER_NAMES, live, sampleGradient, setPresetTarget, stepLighting } from "./lighting.js";
 
 /*
  * Jason's room, modelled and lit in Blender with the lighting baked:
@@ -286,13 +286,6 @@ function setCursor(v) {
 }
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-
-function sampleGradient(stops, t) {
-  const x = Math.min(Math.max(t, 0), 1) * (stops.length - 1);
-  const i = Math.min(Math.floor(x), stops.length - 2);
-  const f = x - i;
-  return stops[i].map((v, j) => v + (stops[i + 1][j] - v) * f);
-}
 
 /* ---------- the room ---------- */
 

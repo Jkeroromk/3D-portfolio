@@ -153,3 +153,11 @@ export function stepLighting(dt) {
   live.bgBottom.lerp(goal.bgBottom, k);
   live.accent.lerp(goal.accent, k);
 }
+
+// colour at t (0..1) along a list of [r, g, b] stops
+export function sampleGradient(stops, t) {
+  const x = Math.min(Math.max(t, 0), 1) * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2);
+  const f = x - i;
+  return stops[i].map((v, j) => v + (stops[i + 1][j] - v) * f);
+}

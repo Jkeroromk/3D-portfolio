@@ -3,6 +3,10 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import {
   AdditiveBlending,
+  CanvasTexture,
+  SphereGeometry,
+  Sprite,
+  SpriteMaterial,
   AnimationMixer,
   BufferAttribute,
   Box3,
@@ -14,9 +18,9 @@ import {
   ShaderMaterial,
   Vector3,
 } from "three";
-import { live } from "./lighting.js";
-import { useRoomState } from "./roomStore.js";
-import { addRipple, lanternGlow, PLINTH_HALF, REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
+import { live, sampleGradient } from "./lighting.js";
+import { getRoomState, useRoomState } from "./roomStore.js";
+import { addRipple, lanternColor, lanternGlow, PLINTH_HALF, REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
 import { ROOM_BASE } from "./roomConfig.js";
 import { renderFlags } from "./renderFlags.js";
 
@@ -24,9 +28,8 @@ import { renderFlags } from "./renderFlags.js";
  * Life on the water:
  *  - rubber ducks drifting round the plinth; now and then one dives and pops
  *    up somewhere else. Click one: squeak, spin, heart. Find all 5 for a parade.
- *  - at night: floating lotus lanterns, fireflies and the odd koi jump.
- * Models: "Yellow rubber duck" by sanch_aozz, "Koi Fish" by 7plus,
- * "Lowpoly textured Floating lotus lantern" by Khyoocumber (Sketchfab, CC BY 4.0).
+ *  - at night: glowing glass orbs, fireflies and the odd koi jump.
+ * Models: "Yellow rubber duck" by sanch_aozz, "Koi Fish" by 7plus (Sketchfab, CC BY 4.0).
  */
 
 const PROPS = ROOM_BASE + "props/";
@@ -244,50 +247,149 @@ function Ducks() {
   );
 }
 
-/* ---------------- night: lanterns ---------------- */
+/* ---------------- night: floating light orbs ---------------- */
 
-function Lanterns() {
-  const { scene } = useGLTF(PROPS + "lotus_lantern.glb");
-  // The model is skinned, and its skeleton carries a 0.01 FBX unit scale that
-  // shrinks it to a centimetre. Its bind-pose mesh is the right size (~26 cm),
-  // so use that as a plain mesh and animate the bobbing ourselves.
+// Glass orbs that drift round the plinth, half in the water. Each takes a
+// colour from the current mood's Nanoleaf gradient and lights the water
+// under it. Click one and it flares and sends out a ripple.
+const ORBS = 6;
+
+const orbVertex = /* glsl */ `
+  varying vec3 vN;
+  varying vec3 vView;
+  void main() {
+    vec4 wp = modelMatrix * vec4(position, 1.0);
+    vN = normalize(mat3(modelMatrix) * normal);
+    vView = normalize(cameraPosition - wp.xyz);
+    gl_Position = projectionMatrix * (modelViewMatrix * vec4(position, 1.0));
+  }
+`;
+const orbFragment = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uGain;
+  varying vec3 vN;
+  varying vec3 vView;
+  void main() {
+    float facing = clamp(dot(normalize(vN), normalize(vView)), 0.0, 1.0);
+    float core = pow(facing, 2.5);
+    float rim = pow(1.0 - facing, 3.0);
+    // tinted glass: a bright core, a darker body and a coloured rim
+    vec3 col = uColor * (0.25 + 1.5 * core) * uGain + vec3(1.0) * pow(core, 6.0) * 0.55 * uGain + uColor * rim * 0.9;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+// soft round glow for the halo sprites
+let haloTexture = null;
+function getHalo() {
+  if (haloTexture) return haloTexture;
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d");
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, "rgba(255,255,255,0.9)");
+  grad.addColorStop(0.18, "rgba(255,255,255,0.45)");
+  grad.addColorStop(0.5, "rgba(255,255,255,0.1)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  haloTexture = new CanvasTexture(c);
+  return haloTexture;
+}
+
+function Orbs() {
   const items = useMemo(() => {
-    let src = null;
-    scene.traverse((o) => {
-      if (!src && (o.isSkinnedMesh || o.isMesh)) src = o;
-    });
-    return Array.from({ length: 6 }, (_, i) => {
+    const geo = new SphereGeometry(1, 32, 20);
+    return Array.from({ length: ORBS }, (_, i) => {
+      const r = rand(0.055, 0.09);
+      const mat = new ShaderMaterial({
+        uniforms: { uColor: { value: new Color(1, 1, 1) }, uGain: { value: 1 } },
+        vertexShader: orbVertex,
+        fragmentShader: orbFragment,
+      });
+      const ball = new Mesh(geo, mat);
+      ball.scale.setScalar(r);
+      ball.layers.enable(REFLECT_LAYER);
+      ball.name = "Orb";
+      const halo = new Sprite(
+        new SpriteMaterial({ map: getHalo(), blending: AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false })
+      );
+      halo.scale.setScalar(r * 7);
+      halo.layers.enable(REFLECT_LAYER);
       const obj = new Group();
-      obj.name = "Lantern";
-      if (src) {
-        const m = new Mesh(src.geometry, src.material);
-        m.layers.enable(REFLECT_LAYER);
-        obj.add(fitModel(m, { size: 0.6 }).obj);
-      }
+      obj.add(ball, halo);
       obj.visible = false;
-      return { obj, angle: (i / 6) * Math.PI * 2 + rand(-0.25, 0.25), radius: rand(0.55, 2.6), speed: rand(0.008, 0.018), phase: rand(0, 6.28) };
+      return {
+        obj,
+        ball,
+        halo,
+        r,
+        t: (i + 0.5) / ORBS, // where on the mood gradient its colour comes from
+        angle: (i / ORBS) * Math.PI * 2 + rand(-0.3, 0.3),
+        radius: rand(0.5, 2.6),
+        speed: rand(0.008, 0.02) * (Math.random() < 0.5 ? -1 : 1),
+        phase: rand(0, 6.28),
+        flare: 0,
+      };
     });
-  }, [scene]);
+  }, []);
+
+  // halos are see-through: keep them out of the depth pre-pass
+  useEffect(() => {
+    items.forEach((it) => renderFlags.hideInPrepass.set(it.halo, () => true));
+    return () => {
+      items.forEach((it) => {
+        renderFlags.hideInPrepass.delete(it.halo);
+        it.ball.material.dispose();
+        it.halo.material.dispose();
+      });
+      lanternGlow.forEach((l) => l.set(0, 0, 0));
+    };
+  }, [items]);
+
   const tmp = useMemo(() => new Vector3(), []);
   const fade = useRef(0);
   useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.05);
     const t = state.clock.elapsedTime;
-    const want = live.night > 0.5 ? 1 : 0;
-    fade.current += (want - fade.current) * Math.min(1, delta * 1.5);
+    const want = live.night > 0.5 && getRoomState().started ? 1 : 0;
+    fade.current += (want - fade.current) * Math.min(1, dt * 1.2);
+    const f = fade.current;
     items.forEach((it, i) => {
-      it.angle += it.speed * delta;
+      it.angle += it.speed * dt;
+      it.flare = Math.max(0, it.flare - dt * 1.4);
       ringPoint(it.angle, it.radius, tmp);
-      it.obj.position.set(tmp.x, WATER_Y - 0.04 + Math.sin(t * 0.9 + it.phase) * 0.015 - (1 - fade.current) * 0.7, tmp.z);
-      it.obj.rotation.set(Math.sin(t * 0.7 + it.phase) * 0.05, t * 0.05 + it.phase, Math.sin(t * 0.8 + it.phase) * 0.05);
-      it.obj.visible = fade.current > 0.02;
-      lanternGlow[i].set(tmp.x, tmp.z, fade.current * live.night * 0.7);
+      // half in the water, bobbing; rises out of / sinks into the water as night comes and goes
+      const bob = Math.sin(t * 1.1 + it.phase) * 0.012;
+      it.obj.position.set(tmp.x, WATER_Y + it.r * 0.35 + bob - (1 - f) * it.r * 2.5, tmp.z);
+      it.obj.visible = f > 0.01;
+      const c = sampleGradient(live.nano, it.t);
+      const pulse = 0.85 + 0.15 * Math.sin(t * 1.7 + it.phase * 3.0);
+      const gain = (pulse + it.flare * 1.5) * f;
+      it.ball.material.uniforms.uColor.value.setRGB(c[0], c[1], c[2]);
+      it.ball.material.uniforms.uGain.value = gain;
+      it.halo.material.color.setRGB(c[0], c[1], c[2]).multiplyScalar(0.55 * gain);
+      it.halo.scale.setScalar(it.r * (7 + it.flare * 5));
+      lanternGlow[i].set(tmp.x, tmp.z, gain * live.night * 0.6);
+      lanternColor[i].set(c[0], c[1], c[2]);
     });
   });
-  useEffect(() => () => lanternGlow.forEach((l) => l.set(0, 0, 0)), []);
+
   return (
     <group>
       {items.map((it, i) => (
-        <primitive key={i} object={it.obj} />
+        <primitive
+          key={i}
+          object={it.obj}
+          onClick={(e) => {
+            if (e.object !== it.ball) return;
+            e.stopPropagation();
+            it.flare = 1;
+            addRipple(it.obj.position.x, it.obj.position.z, 0.9);
+          }}
+          onPointerOver={(e) => e.object === it.ball && (document.body.style.cursor = "pointer")}
+          onPointerOut={() => (document.body.style.cursor = "auto")}
+        />
       ))}
     </group>
   );
@@ -477,10 +579,10 @@ export default function WaterLife() {
         <Ducks />
       </Suspense>
       <Fireflies />
-      {/* lanterns and koi only load once a night preset has been used */}
+      <Orbs />
+      {/* the koi only loads once a night preset has been used */}
       {nightEver.current && (
         <Suspense fallback={null}>
-          <Lanterns />
           <Koi />
         </Suspense>
       )}

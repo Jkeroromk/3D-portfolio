@@ -100,7 +100,6 @@ export const CREDITS = [
     items: [
       { what: "Yellow rubber duck", author: "sanch_aozz", url: SF + "1990cda4c97e400f852d2b4078ebb958" },
       { what: "Koi fish", author: "7plus", url: SF + "236859b809984f52b70c94fd040b9c59" },
-      { what: "Floating lotus lantern", author: "Khyoocumber", url: SF + "4c0c3ac973ad4fd08d1587ad091c5fe0" },
     ],
   },
 ];

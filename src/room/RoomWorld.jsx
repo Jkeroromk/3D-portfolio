@@ -42,8 +42,9 @@ export function addRipple(x, z, strength = 1) {
   rippleNext = (rippleNext + 1) % MAX_RIPPLES;
 }
 
-// Warm light pools on the water under the floating lanterns (x, z, intensity)
+// Light pools on the water under the floating orbs: (x, z, intensity) and colour
 export const lanternGlow = Array.from({ length: 6 }, () => new Vector3(0, 0, 0));
+export const lanternColor = Array.from({ length: 6 }, () => new Vector3(1, 0.62, 0.28));
 
 const skyVertex = /* glsl */ `
   varying vec3 vDir;
@@ -109,6 +110,7 @@ const waterFragment = /* glsl */ `
   uniform vec2 uPlinth;
   uniform vec4 uRipples[${MAX_RIPPLES}];
   uniform vec3 uLanterns[6];
+  uniform vec3 uLanternCol[6];
   varying vec3 vWorld;
   varying vec4 vReflect;
 
@@ -178,12 +180,12 @@ const waterFragment = /* glsl */ `
     vec2 q = abs(vWorld.xz) - uPlinth;
     float pd = length(max(q, 0.0));
     col += uGlow * exp(-pd * 1.6) * 0.5;
-    // floating lanterns light the water around them
+    // floating orbs light the water around them
     for (int i = 0; i < 6; i++) {
       vec3 l = uLanterns[i];
       if (l.z <= 0.0) continue;
       float dl = length(vWorld.xz - l.xy);
-      col += vec3(1.0, 0.62, 0.28) * l.z * (exp(-dl * 3.2) * 0.9 + exp(-dl * 0.9) * 0.12);
+      col += uLanternCol[i] * l.z * (exp(-dl * 3.2) * 0.9 + exp(-dl * 0.9) * 0.12);
     }
     // haze into the horizon
     col = mix(col, uHorizon, smoothstep(10.0, 48.0, dist));
@@ -237,6 +239,7 @@ export default function RoomWorld() {
           uPlinth: { value: PLINTH_HALF.clone() },
           uRipples: { value: ripples },
           uLanterns: { value: lanternGlow },
+          uLanternCol: { value: lanternColor },
         },
         vertexShader: waterVertex,
         fragmentShader: waterFragment,
