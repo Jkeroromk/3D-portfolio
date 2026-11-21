@@ -22,6 +22,8 @@ import {
   VideoTexture,
 } from "three";
 import { HOTSPOTS, ROOM_BASE } from "./roomConfig.js";
+import { MOBILE } from "./device.js";
+import RoomWorld, { REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
 import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js";
 
@@ -53,16 +55,6 @@ const lateManager = new LoadingManager();
 
 // Phones get half-resolution textures (4K -> 2K); when the visitor focuses on
 // something, just that group swaps to full resolution until they leave.
-const MOBILE = (() => {
-  try {
-    const q = new URLSearchParams(window.location.search);
-    if (q.has("tier")) return q.get("tier") === "mobile";
-    const small = Math.min(window.screen.width, window.screen.height) <= 820;
-    return /iPhone|iPod|Android.+Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && small);
-  } catch {
-    return false;
-  }
-})();
 const pick = (full, mobile) => (MOBILE && mobile) || full;
 
 // ImageBitmapLoader decodes JPGs off the main thread (TextureLoader decodes on
@@ -132,7 +124,7 @@ const vertex = /* glsl */ `
 // room. Every room material shares these two uniforms.
 const REVEAL = { value: 10 }; // world height below which the room is visible
 const REVEAL_EDGE = { value: new Vector3() }; // scan-line colour (preset accent)
-const REVEAL_FROM = FLOOR_Y - 0.15;
+const REVEAL_FROM = WATER_Y - 0.05; // start at the waterline so the plinth prints too
 const REVEAL_TO = FLOOR_Y + 2.9;
 const REVEAL_TIME = 2.6;
 const revealChunk = /* glsl */ `
@@ -429,8 +421,20 @@ function Room({ manifest, onHotspot }) {
         };
       });
 
-    // Centre the room on the origin with the floor at FLOOR_Y
+    // Only the room shell and the plinth show in the water (the reflection is
+    // seen from below the floor, so the furniture never appears in it)
+    ["Bake_Room", "Bake_Plinth"].forEach((n) => {
+      const o = scene.getObjectByName(n);
+      if (o) o.layers.enable(REFLECT_LAYER);
+    });
+
+    // Centre the room on the origin with the floor at FLOOR_Y (the plinth
+    // under the floor is left out so the framing stays the same)
+    const plinth = scene.getObjectByName("Bake_Plinth");
+    const plinthParent = plinth && plinth.parent;
+    if (plinth) plinthParent.remove(plinth);
     const bb = new Box3().setFromObject(scene);
+    if (plinth) plinthParent.add(plinth);
     const c = bb.getCenter(new Vector3());
     const offset = new Vector3(-c.x, FLOOR_Y - bb.min.y, -c.z);
 
@@ -971,6 +975,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         maxAzimuthAngle={0.05}
         rotateSpeed={0.5}
       />
+      <RoomWorld />
       <Suspense fallback={null}>{manifest && <Room manifest={manifest} onHotspot={onHotspot} />}</Suspense>
     </>
   );

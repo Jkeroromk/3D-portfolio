@@ -368,6 +368,27 @@
      "night/Quest_layersB.jpg"
     ]
    }
+  },
+  {
+   "mesh": "Bake_Plinth",
+   "day": "bake/Plinth_day.jpg",
+   "night": {
+    "base": "night/Plinth_base.jpg",
+    "albedo": "night/Plinth_albedo.jpg",
+    "layers": [
+     "night/Plinth_layersA.jpg",
+     "night/Plinth_layersB.jpg"
+    ],
+    "kBase": 0.009745,
+    "k": [
+     0.042651,
+     0.007267,
+     1.272624,
+     0.091242,
+     0.083152,
+     0.002674
+    ]
+   }
   }
  ],
  "screens": [
