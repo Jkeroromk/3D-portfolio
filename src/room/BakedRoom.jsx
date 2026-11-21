@@ -792,6 +792,13 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   useEffect(() => {
     scene.background = null;
   }, [scene]);
+
+  // previews only: expose the scene so it can be inspected from the console
+  useEffect(() => {
+    if (/-projects\.vercel\.app$/.test(window.location.hostname) || window.location.hostname === "localhost") {
+      window.__room = { scene, camera };
+    }
+  }, [scene, camera]);
   const controls = useRef();
   const { started, focus } = useRoomState();
   const tween = useRef(null);

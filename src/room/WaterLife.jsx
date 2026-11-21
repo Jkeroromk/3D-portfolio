@@ -108,6 +108,7 @@ function Ducks() {
     const s = DUCK_HEIGHT / 3.66;
     return Array.from({ length: DUCKS }, () => {
       const holder = new Group();
+      holder.name = "Duck";
       const g = scene.clone(true);
       g.scale.setScalar(s);
       g.position.y = 1.541 * s - DUCK_HEIGHT * 0.22;
@@ -234,6 +235,7 @@ function Lanterns() {
     () =>
       Array.from({ length: 6 }, (_, i) => {
         const obj = cloneSkinned(scene);
+        obj.name = "Lantern";
         obj.scale.setScalar(3.2); // ~60 cm across
         obj.traverse((o) => {
           if (o.isMesh) {
