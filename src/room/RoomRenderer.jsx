@@ -204,12 +204,15 @@ export default function RoomRenderer() {
     const tick = now - p.lastTick;
     p.lastTick = now;
 
-    // refresh interval: a low percentile of the recent rAF intervals
-    p.ticks.push(tick);
+    // refresh interval: the median of recent rAF intervals (loading hitches
+    // and catch-up ticks are ignored by the median; skipped refreshes on a
+    // paced beat land exactly on it)
+    if (renderFlags.phase === "loading") p.ticks.length = 0;
+    else p.ticks.push(tick);
     if (p.ticks.length > 120) p.ticks.shift();
     if (++p.tickCount % 30 === 0 && p.ticks.length >= 60) {
       const sorted = [...p.ticks].sort((a, b) => a - b);
-      p.vs = Math.min(34, Math.max(3, sorted[Math.floor(sorted.length * 0.2)]));
+      p.vs = Math.min(34, Math.max(3, sorted[sorted.length >> 1]));
       p.maxN = Math.max(1, Math.floor(1000 / p.vs / MIN_FPS));
       if (!p.calibrated) {
         // high-refresh screens start on a 60-ish beat; it speeds up at rest if the GPU allows
