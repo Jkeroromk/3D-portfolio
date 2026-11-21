@@ -1,0 +1,821 @@
+{
+ "glb": "room.glb",
+ "bakes": [
+  {
+   "mesh": "Bake_Room",
+   "day": "bake/Room_day.jpg",
+   "night": {
+    "base": "night/Room_base.jpg",
+    "albedo": "night/Room_albedo.jpg",
+    "layers": [
+     "night/Room_layersA.jpg",
+     "night/Room_layersB.jpg"
+    ],
+    "kBase": 0.017574,
+    "k": [
+     6.374786,
+     69.578934,
+     3.016477,
+     0.422945,
+     2.572327,
+     10.907786
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Sofa",
+   "day": "bake/Sofa_day.jpg",
+   "night": {
+    "base": "night/Sofa_base.jpg",
+    "albedo": "night/Sofa_albedo.jpg",
+    "layers": [
+     "night/Sofa_layersA.jpg",
+     "night/Sofa_layersB.jpg"
+    ],
+    "kBase": 0.007889,
+    "k": [
+     0.088809,
+     0.04798,
+     0.175492,
+     0.6736,
+     0.37583,
+     3.007483
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Decor",
+   "day": "bake/Decor_day.jpg",
+   "night": {
+    "base": "night/Decor_base.jpg",
+    "albedo": "night/Decor_albedo.jpg",
+    "layers": [
+     "night/Decor_layersA.jpg",
+     "night/Decor_layersB.jpg"
+    ],
+    "kBase": 0.016199,
+    "k": [
+     0.100215,
+     0.068477,
+     0.165212,
+     0.776032,
+     5.126373,
+     0.206934
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Desk",
+   "day": "bake/Desk_day.jpg",
+   "night": {
+    "base": "night/Desk_base.jpg",
+    "albedo": "night/Desk_albedo.jpg",
+    "layers": [
+     "night/Desk_layersA.jpg",
+     "night/Desk_layersB.jpg"
+    ],
+    "kBase": 0.296273,
+    "k": [
+     6.634224,
+     24.081316,
+     4.254381,
+     0.013638,
+     7.4249,
+     0.030716
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Speakers",
+   "day": "bake/Speakers_day.jpg",
+   "night": {
+    "base": "night/Speakers_base.jpg",
+    "albedo": "night/Speakers_albedo.jpg",
+    "layers": [
+     "night/Speakers_layersA.jpg",
+     "night/Speakers_layersB.jpg"
+    ],
+    "kBase": 2.545067,
+    "k": [
+     1.125336,
+     2.797117,
+     0.01072,
+     0.005245,
+     2.045987,
+     0.002159
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_PC",
+   "day": "bake/PC_day.jpg",
+   "night": {
+    "base": "night/PC_base.jpg",
+    "albedo": "night/PC_albedo.jpg",
+    "layers": [
+     "night/PC_layersA.jpg",
+     "night/PC_layersB.jpg"
+    ],
+    "kBase": 20.408251,
+    "k": [
+     0.191541,
+     0.558948,
+     2.080832,
+     0.016129,
+     0.198213,
+     0.030463
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Shelf",
+   "day": "bake/Shelf_day.jpg",
+   "night": {
+    "base": "night/Shelf_base.jpg",
+    "albedo": "night/Shelf_albedo.jpg",
+    "layers": [
+     "night/Shelf_layersA.jpg",
+     "night/Shelf_layersB.jpg"
+    ],
+    "kBase": 0.013828,
+    "k": [
+     0.198461,
+     0.963138,
+     0.712357,
+     0.006161,
+     2.793492,
+     0.00923
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Lego",
+   "day": "bake/Lego_day.jpg",
+   "night": {
+    "base": "night/Lego_base.jpg",
+    "albedo": "night/Lego_albedo.jpg",
+    "layers": [
+     "night/Lego_layersA.jpg",
+     "night/Lego_layersB.jpg"
+    ],
+    "kBase": 0.012692,
+    "k": [
+     0.178445,
+     0.122508,
+     0.016705,
+     0.009806,
+     0.192922,
+     0.02232
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Chair",
+   "day": "bake/Chair_day.jpg",
+   "night": {
+    "base": "night/Chair_base.jpg",
+    "albedo": "night/Chair_albedo.jpg",
+    "layers": [
+     "night/Chair_layersA.jpg",
+     "night/Chair_layersB.jpg"
+    ],
+    "kBase": 0.051954,
+    "k": [
+     0.324025,
+     0.749212,
+     7.661743,
+     0.023489,
+     0.378947,
+     0.021997
+    ]
+   }
+  },
+  {
+   "meshes": [
+    "WFan_fan1_001_14",
+    "WFan_fan1_002_15",
+    "WFan_fan1_0",
+    "WFan_SL120_3",
+    "WFan_SL120_4",
+    "WFan_SL120_5",
+    "WFan_SL120_6",
+    "WFan_SL120_7",
+    "WFan_SL120_8",
+    "WFan_SL120_9"
+   ],
+   "day": "bake/Fans_day.jpg",
+   "night": {
+    "base": "night/Fans_base.jpg",
+    "albedo": "night/Fans_albedo.jpg",
+    "layers": [
+     "night/Fans_layersA.jpg",
+     "night/Fans_layersB.jpg"
+    ],
+    "kBase": 0.633964,
+    "k": [
+     0.074306,
+     0.08203,
+     0.024428,
+     0.002276,
+     0.111596,
+     0.00279
+    ]
+   }
+  },
+  {
+   "meshes": [
+    "WG_Lamp_Glow",
+    "WG_LightBarLED",
+    "WG_Lamp2_Glow",
+    "WG_FloorLamp_Bulb",
+    "WG_NL_LED00",
+    "WG_NL_LED01",
+    "WG_NL_LED02",
+    "WG_NL_LED03",
+    "WG_NL_LED04",
+    "WG_NL_LED05",
+    "WG_NL_LED06",
+    "WG_NL_LED07",
+    "WG_NL_LED08",
+    "WG_NL_LED09",
+    "WG_NL_LED10",
+    "WG_NL_LED11",
+    "WG_NL_LED12",
+    "WG_NL_LED13",
+    "WG_NL_LED14",
+    "WG_NL_LED15",
+    "WG_NL_LED16",
+    "WG_NL_LED17"
+   ],
+   "day": "bake/Glow_day.jpg"
+  },
+  {
+   "mesh": "Bake_Blanket",
+   "day": "bake/Blanket_day.jpg",
+   "night": {
+    "base": "night/Blanket_base.jpg",
+    "albedo": "night/Blanket_albedo.jpg",
+    "layers": [
+     "night/Blanket_layersA.jpg",
+     "night/Blanket_layersB.jpg"
+    ],
+    "kBase": 0.013865,
+    "k": [
+     0.036462,
+     0.00186,
+     0.009049,
+     0.258351,
+     0.151255,
+     0.001698
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Quest",
+   "day": "bake/Quest_day.jpg",
+   "night": {
+    "base": "night/Quest_base.jpg",
+    "albedo": "night/Quest_albedo.jpg",
+    "layers": [
+     "night/Quest_layersA.jpg",
+     "night/Quest_layersB.jpg"
+    ],
+    "kBase": 0.017182,
+    "k": [
+     0.092707,
+     0.021459,
+     0.118645,
+     0.371242,
+     0.050316,
+     0.035662
+    ]
+   }
+  }
+ ],
+ "screens": [
+  {
+   "mesh": "Screen_G9",
+   "image": "screens/g9_kerocam.jpg"
+  },
+  {
+   "mesh": "Screen_Upper",
+   "video": "screens/911.mp4"
+  },
+  {
+   "mesh": "Screen_Vert",
+   "image": "screens/github_profile.jpg"
+  },
+  {
+   "mesh": "Photo_Couple",
+   "image": "screens/photo_couple.jpg",
+   "day": 1.0,
+   "night": 0.8
+  },
+  {
+   "mesh": "Photo_Doudou",
+   "image": "screens/photo_doudou.jpg",
+   "day": 1.0,
+   "night": 0.8
+  }
+ ],
+ "nightOnly": [
+  {
+   "mesh": "Night_StripDesk",
+   "layer": "deskwall",
+   "color": [
+    0.45,
+    0.55,
+    1.0
+   ]
+  },
+  {
+   "mesh": "Night_StripUnder",
+   "layer": "underdesk",
+   "color": [
+    0.7,
+    0.35,
+    1.0
+   ]
+  }
+ ],
+ "glow": [
+  {
+   "mesh": "WG_Lamp_Glow",
+   "kind": "lamps"
+  },
+  {
+   "mesh": "WG_LightBarLED",
+   "kind": "lamps"
+  },
+  {
+   "mesh": "WG_Lamp2_Glow",
+   "kind": "lamps"
+  },
+  {
+   "mesh": "WG_FloorLamp_Bulb",
+   "kind": "lamps"
+  },
+  {
+   "mesh": "WG_NL_LED00",
+   "kind": "nano",
+   "t": 0.0
+  },
+  {
+   "mesh": "WG_NL_LED01",
+   "kind": "nano",
+   "t": 0.2
+  },
+  {
+   "mesh": "WG_NL_LED02",
+   "kind": "nano",
+   "t": 0.4
+  },
+  {
+   "mesh": "WG_NL_LED03",
+   "kind": "nano",
+   "t": 0.6
+  },
+  {
+   "mesh": "WG_NL_LED04",
+   "kind": "nano",
+   "t": 0.8
+  },
+  {
+   "mesh": "WG_NL_LED05",
+   "kind": "nano",
+   "t": 1.0
+  },
+  {
+   "mesh": "WG_NL_LED06",
+   "kind": "nano",
+   "t": 0.1
+  },
+  {
+   "mesh": "WG_NL_LED07",
+   "kind": "nano",
+   "t": 0.3
+  },
+  {
+   "mesh": "WG_NL_LED08",
+   "kind": "nano",
+   "t": 0.5
+  },
+  {
+   "mesh": "WG_NL_LED09",
+   "kind": "nano",
+   "t": 0.7
+  },
+  {
+   "mesh": "WG_NL_LED10",
+   "kind": "nano",
+   "t": 0.9
+  },
+  {
+   "mesh": "WG_NL_LED11",
+   "kind": "nano",
+   "t": 0.2
+  },
+  {
+   "mesh": "WG_NL_LED12",
+   "kind": "nano",
+   "t": 0.4
+  },
+  {
+   "mesh": "WG_NL_LED13",
+   "kind": "nano",
+   "t": 0.6
+  },
+  {
+   "mesh": "WG_NL_LED14",
+   "kind": "nano",
+   "t": 0.8
+  },
+  {
+   "mesh": "WG_NL_LED15",
+   "kind": "nano",
+   "t": 0.5
+  },
+  {
+   "mesh": "WG_NL_LED16",
+   "kind": "nano",
+   "t": 0.9
+  },
+  {
+   "mesh": "WG_NL_LED17",
+   "kind": "nano",
+   "t": 0.1
+  }
+ ],
+ "chairPivot": [
+  -1.1776,
+  0.4,
+  1.46159
+ ],
+ "fans": [
+  {
+   "mesh": "WFan_SL120_3",
+   "center": [
+    -1.16013,
+    1.18462,
+    0.55581
+   ],
+   "axis": [
+    4e-05,
+    1.0,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_SL120_4",
+   "center": [
+    -1.03113,
+    1.18462,
+    0.55581
+   ],
+   "axis": [
+    4e-05,
+    1.0,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_SL120_5",
+   "center": [
+    -0.90213,
+    1.18462,
+    0.55581
+   ],
+   "axis": [
+    4e-05,
+    1.0,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_SL120_6",
+   "center": [
+    -1.1467,
+    0.82379,
+    0.63322
+   ],
+   "axis": [
+    4e-05,
+    1.0,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_SL120_7",
+   "center": [
+    -1.0177,
+    0.82379,
+    0.63322
+   ],
+   "axis": [
+    4e-05,
+    1.0,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_SL120_8",
+   "center": [
+    -0.8887,
+    0.82379,
+    0.63322
+   ],
+   "axis": [
+    4e-05,
+    1.0,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_SL120_9",
+   "center": [
+    -0.7878,
+    0.91763,
+    0.66779
+   ],
+   "axis": [
+    1.0,
+    -4e-05,
+    -0.0003
+   ]
+  },
+  {
+   "mesh": "WFan_fan1_0",
+   "center": [
+    -1.19932,
+    0.87795,
+    0.48423
+   ],
+   "axis": [
+    0.00048,
+    -0.0001,
+    -1.0
+   ]
+  },
+  {
+   "mesh": "WFan_fan1_001_14",
+   "center": [
+    -1.19932,
+    0.99962,
+    0.48423
+   ],
+   "axis": [
+    0.00048,
+    -0.0001,
+    -1.0
+   ]
+  },
+  {
+   "mesh": "WFan_fan1_002_15",
+   "center": [
+    -1.19932,
+    1.12048,
+    0.48423
+   ],
+   "axis": [
+    0.00048,
+    -0.0001,
+    -1.0
+   ]
+  }
+ ],
+ "hotspots": [
+  {
+   "key": "G9",
+   "min": [
+    -0.3001,
+    0.865,
+    0.905
+   ],
+   "max": [
+    -0.0399,
+    1.3189,
+    2.055
+   ],
+   "cam": [
+    -1.3947,
+    1.2384,
+    1.379
+   ],
+   "look": [
+    -0.24,
+    1.137,
+    1.48
+   ]
+  },
+  {
+   "key": "Vert",
+   "min": [
+    -0.694,
+    0.775,
+    0.5362
+   ],
+   "max": [
+    -0.4294,
+    1.412,
+    0.7866
+   ],
+   "cam": [
+    -0.7481,
+    1.2386,
+    1.3434
+   ],
+   "look": [
+    -0.569,
+    1.178,
+    0.675
+   ]
+  },
+  {
+   "key": "MacBook",
+   "min": [
+    -0.59,
+    0.775,
+    2.275
+   ],
+   "max": [
+    -0.25,
+    1.0055,
+    2.345
+   ],
+   "cam": [
+    -0.42,
+    1.0156,
+    2.7779
+   ],
+   "look": [
+    -0.42,
+    0.8902,
+    2.31
+   ]
+  },
+  {
+   "key": "PC",
+   "min": [
+    -1.2732,
+    0.775,
+    0.4078
+   ],
+   "max": [
+    -0.7668,
+    1.2077,
+    0.7429
+   ],
+   "cam": [
+    -1.6586,
+    1.5105,
+    1.4873
+   ],
+   "look": [
+    -1.02,
+    0.9913,
+    0.5753
+   ]
+  },
+  {
+   "key": "StreamDeck",
+   "min": [
+    -1.1592,
+    0.7659,
+    0.7495
+   ],
+   "max": [
+    -1.0412,
+    0.8241,
+    0.8362
+   ]
+  },
+  {
+   "key": "Nanoleaf",
+   "min": [
+    -0.0113,
+    1.443,
+    0.8017
+   ],
+   "max": [
+    -0.0108,
+    2.0106,
+    2.1471
+   ]
+  },
+  {
+   "key": "Quest",
+   "min": [
+    -3.0642,
+    0.4395,
+    1.3397
+   ],
+   "max": [
+    -2.6451,
+    0.6504,
+    1.74
+   ],
+   "cam": [
+    -3.1293,
+    1.4732,
+    2.1289
+   ],
+   "look": [
+    -2.8547,
+    0.545,
+    1.5398
+   ]
+  },
+  {
+   "key": "Lego",
+   "min": [
+    -0.84,
+    1.791,
+    0.0499
+   ],
+   "max": [
+    -0.29,
+    2.113,
+    0.2301
+   ],
+   "cam": [
+    -0.6938,
+    2.1507,
+    0.8704
+   ],
+   "look": [
+    -0.565,
+    1.952,
+    0.14
+   ]
+  },
+  {
+   "key": "Logo",
+   "min": [
+    -3.76,
+    1.35,
+    -0.03
+   ],
+   "max": [
+    -3.02,
+    1.85,
+    -0.0
+   ],
+   "cam": [
+    -3.39,
+    1.6878,
+    0.9885
+   ],
+   "look": [
+    -3.39,
+    1.6,
+    -0.015
+   ]
+  },
+  {
+   "key": "Couple",
+   "min": [
+    -4.25,
+    1.31,
+    -0.03
+   ],
+   "max": [
+    -3.85,
+    1.83,
+    -0.0
+   ],
+   "cam": [
+    -4.05,
+    1.6613,
+    1.0285
+   ],
+   "look": [
+    -4.05,
+    1.57,
+    -0.015
+   ]
+  },
+  {
+   "key": "Doudou",
+   "min": [
+    -2.93,
+    1.31,
+    -0.03
+   ],
+   "max": [
+    -2.53,
+    1.83,
+    -0.0
+   ],
+   "cam": [
+    -2.73,
+    1.6613,
+    1.0285
+   ],
+   "look": [
+    -2.73,
+    1.57,
+    -0.015
+   ]
+  }
+ ]
+}
