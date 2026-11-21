@@ -358,7 +358,7 @@ function Room({ manifest, onHotspot }) {
       }
       const mat = new MeshBasicMaterial({ map, toneMapped: false });
       mesh.material = mat;
-      lit.push({ mat, mesh, day: s.day ?? 1, night: s.night ?? 1 });
+      lit.push({ mat, mesh, day: s.day ?? 1, night: s.night ?? 1, photo: !!s.mesh.startsWith("Photo_") });
     });
 
     (manifest.nightOnly || []).forEach((n) => {
@@ -655,8 +655,12 @@ function Room({ manifest, onHotspot }) {
       u.uGlow.value.copy(tmpC);
     });
 
-    room.lit.forEach(({ mat, mesh, minY, day, night: n }) => {
-      const v = (day + (n - day) * night) * Math.max(I.day, I.base);
+    // how much light falls on the walls at night (ceiling spots + lamps)
+    const luma = (c) => 0.3 * c[0] + 0.55 * c[1] + 0.15 * c[2];
+    const wallLight = Math.min(1, 0.18 + 0.7 * (luma(live.layers[3]) + luma(live.layers[4])));
+    room.lit.forEach(({ mat, mesh, minY, day, night: n, photo }) => {
+      const nightV = photo ? n * wallLight : n; // photos aren't screens: they dim with the room
+      const v = (day + (nightV - day) * night) * Math.max(I.day, I.base);
       mat.color.setRGB(v, v, v);
       mesh.visible = REVEAL.value > minY;
     });
@@ -969,7 +973,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         enableDamping
         dampingFactor={0.08}
         minDistance={2}
-        maxDistance={started ? 7 * pullBack : 40}
+        maxDistance={started ? 10 * pullBack : 40}
         minPolarAngle={0.45}
         maxPolarAngle={1.35}
         minAzimuthAngle={-1.45}

@@ -29,13 +29,30 @@ import { ROOM_BASE } from "./roomConfig.js";
 
 const PROPS = ROOM_BASE + "props/";
 const DUCKS = 5;
+const DUCK_HEIGHT = 0.36; // toy-sized next to the room, big enough to spot
 // the duck model faces +z; tweak here if it swims sideways
 const DUCK_YAW = 0;
 const rand = (a, b) => a + Math.random() * (b - a);
 
-// a point on the water outside the plinth, at angle a and "radius" r
+// A point on the water at angle a, r metres out from the plinth's edge. The
+// path is a squarish superellipse hugging the rectangular plinth, so nothing
+// cuts through its corners.
 function ringPoint(a, r, out = new Vector3()) {
-  return out.set(Math.cos(a) * (PLINTH_HALF.x + r), WATER_Y, Math.sin(a) * (PLINTH_HALF.y + r));
+  const A = PLINTH_HALF.x + r;
+  const B = PLINTH_HALF.y + r;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const n = 6;
+  const k = 1 / Math.pow(Math.pow(Math.abs(c) / A, n) + Math.pow(Math.abs(s) / B, n), 1 / n);
+  return out.set(c * k, WATER_Y, s * k);
+}
+const _a = new Vector3();
+const _b = new Vector3();
+// direction of travel along that path (x, z), for facing
+function ringTangent(a, r, dir) {
+  ringPoint(a - 0.01, r, _a);
+  ringPoint(a + 0.01, r, _b);
+  return [(_b.x - _a.x) * dir, (_b.z - _a.z) * dir];
 }
 
 let audio = null;
@@ -86,14 +103,14 @@ function Ducks() {
   const found = useRef(new Set());
   const parade = useRef({ until: 0, start: false });
 
-  // ~18 cm tall, sitting a little into the water
+  // sitting a little into the water
   const clones = useMemo(() => {
-    const s = 0.18 / 3.66;
+    const s = DUCK_HEIGHT / 3.66;
     return Array.from({ length: DUCKS }, () => {
       const holder = new Group();
       const g = scene.clone(true);
       g.scale.setScalar(s);
-      g.position.y = 1.541 * s - 0.045;
+      g.position.y = 1.541 * s - DUCK_HEIGHT * 0.22;
       g.traverse((o) => o.isMesh && o.layers.enable(REFLECT_LAYER));
       holder.add(g);
       holder.visible = false;
@@ -107,7 +124,7 @@ function Ducks() {
         i,
         obj,
         angle: (i / DUCKS) * Math.PI * 2 + rand(-0.3, 0.3),
-        radius: rand(0.9, 3.4),
+        radius: rand(0.45, 2.2),
         speed: rand(0.025, 0.05) * (Math.random() < 0.5 ? -1 : 1),
         phase: rand(0, 6.28),
         depth: 1, // 1 = under water, 0 = floating
@@ -152,7 +169,7 @@ function Ducks() {
           d.state = "hidden";
           d.timer = rand(2, 5);
           d.angle = rand(0, Math.PI * 2);
-          d.radius = rand(0.9, 3.4);
+          d.radius = rand(0.45, 2.2);
         }
       }
 
@@ -161,20 +178,19 @@ function Ducks() {
         // all five in a row, swimming round the room
         const target = t * 0.22 - n * 0.32;
         d.angle += (target - d.angle) * Math.min(1, dt * 1.5);
-        d.radius += (1.3 - d.radius) * Math.min(1, dt);
+        d.radius += (0.7 - d.radius) * Math.min(1, dt);
         dir = 1;
       } else {
         d.angle += d.speed * dt;
       }
       ringPoint(d.angle, d.radius, p);
       // direction of travel along the ring
-      const dx = -Math.sin(d.angle) * (PLINTH_HALF.x + d.radius) * dir;
-      const dz = Math.cos(d.angle) * (PLINTH_HALF.y + d.radius) * dir;
+      const [dx, dz] = ringTangent(d.angle, d.radius, dir);
       d.spin = Math.max(0, d.spin - dt * 9);
       d.hop = Math.max(0, d.hop - dt * 2.4);
       const hopY = d.hop > 0 ? Math.sin((1 - d.hop) * Math.PI) * 0.12 : 0;
       const o = d.obj;
-      o.position.set(p.x, WATER_Y + Math.sin(t * 1.4 + d.phase) * 0.012 - d.depth * 0.26 + hopY, p.z);
+      o.position.set(p.x, WATER_Y + Math.sin(t * 1.4 + d.phase) * 0.015 - d.depth * 0.45 + hopY * 1.6, p.z);
       o.rotation.set(Math.sin(t * 1.1 + d.phase) * 0.06, Math.atan2(dx, dz) + DUCK_YAW + d.spin, Math.sin(t * 1.3 + d.phase) * 0.07);
       o.visible = d.depth < 0.98;
     });
@@ -218,7 +234,7 @@ function Lanterns() {
     () =>
       Array.from({ length: 6 }, (_, i) => {
         const obj = cloneSkinned(scene);
-        obj.scale.setScalar(1.6);
+        obj.scale.setScalar(3.2); // ~60 cm across
         obj.traverse((o) => {
           if (o.isMesh) {
             o.layers.enable(REFLECT_LAYER);
@@ -232,7 +248,7 @@ function Lanterns() {
           a.time = Math.random() * clip.duration;
           a.play();
         });
-        return { obj, mixer, angle: (i / 6) * Math.PI * 2 + rand(-0.25, 0.25), radius: rand(1.6, 4.2), speed: rand(0.008, 0.018), phase: rand(0, 6.28) };
+        return { obj, mixer, angle: (i / 6) * Math.PI * 2 + rand(-0.25, 0.25), radius: rand(0.55, 2.6), speed: rand(0.008, 0.018), phase: rand(0, 6.28) };
       }),
     [scene, animations]
   );
@@ -246,10 +262,10 @@ function Lanterns() {
       it.mixer.update(Math.min(delta, 0.05));
       it.angle += it.speed * delta;
       ringPoint(it.angle, it.radius, tmp);
-      it.obj.position.set(tmp.x, WATER_Y - 0.02 + Math.sin(t * 0.9 + it.phase) * 0.012 - (1 - fade.current) * 0.4, tmp.z);
+      it.obj.position.set(tmp.x, WATER_Y - 0.04 + Math.sin(t * 0.9 + it.phase) * 0.015 - (1 - fade.current) * 0.7, tmp.z);
       it.obj.rotation.set(Math.sin(t * 0.7 + it.phase) * 0.05, t * 0.05 + it.phase, Math.sin(t * 0.8 + it.phase) * 0.05);
       it.obj.visible = fade.current > 0.02;
-      lanternGlow[i].set(tmp.x, tmp.z, fade.current * live.night * 0.55);
+      lanternGlow[i].set(tmp.x, tmp.z, fade.current * live.night * 0.7);
     });
   });
   useEffect(() => () => lanternGlow.forEach((l) => l.set(0, 0, 0)), []);
