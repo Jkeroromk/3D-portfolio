@@ -101,20 +101,27 @@ function StreamDeck() {
   );
 }
 
+// Follows the pointer: the hotspot name on hover, and on phones a
+// "loading details" spinner while the full-res textures come in before the zoom.
 function HoverLabel() {
-  const { hover, focus } = useRoomState();
+  const { hover, focus, pending } = useRoomState();
   const ref = useRef();
   useEffect(() => {
     const move = (e) => {
       if (ref.current) ref.current.style.transform = `translate(${e.clientX + 16}px, ${e.clientY + 14}px)`;
     };
     window.addEventListener("pointermove", move);
-    return () => window.removeEventListener("pointermove", move);
+    window.addEventListener("pointerdown", move);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerdown", move);
+    };
   }, []);
-  const label = hover && !focus ? HOTSPOTS[hover]?.label : null;
+  const label = pending ? HOTSPOTS[pending]?.label : hover && !focus ? HOTSPOTS[hover]?.label : null;
   return (
-    <div ref={ref} className={`room-hover ${label ? "room-hover--on" : ""}`}>
-      {label}
+    <div ref={ref} className={`room-hover ${label ? "room-hover--on" : ""} ${pending ? "room-hover--pending" : ""}`}>
+      {pending && <span className="room-hover__spinner" />}
+      {pending ? `Loading ${label}` : label}
     </div>
   );
 }

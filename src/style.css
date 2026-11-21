@@ -553,6 +553,22 @@ html[data-mode="macbook"] #root {
   opacity: 1;
 }
 
+.room-hover--pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-color: var(--accent);
+}
+
+.room-hover__spinner {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: room-spin 0.8s linear infinite;
+}
+
 /* focus card */
 .room-card {
   position: fixed;
