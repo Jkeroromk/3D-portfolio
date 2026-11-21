@@ -1,5 +1,5 @@
 import { Environment, PresentationControls, Text } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef, useState } from "react";
 import {
   CanvasTexture,
@@ -22,9 +22,10 @@ const DESK = 0.765; // desk top height
 const WHITE = "#f1f1f1";
 const BLACK = "#1b1b1b";
 const CAMERA_TARGET = new Vector3(-2, 2.6, 5.2);
+const DESKTOP_ASPECT = 1.35;
 
 const NANOLEAF_PALETTES = [
-  { color: "#fff6e8", light: "#fff1dc" },
+  { color: "#ffe2b8", light: "#ffe7c4" },
   { color: "#b388ff", light: "#9b6bff" },
   { color: "#5ce1e6", light: "#3fd3dc" },
   { color: "#ff7eb6", light: "#ff5fa2" },
@@ -508,7 +509,7 @@ function GamingPC() {
       if (!mat) return;
       tmp.setHSL((t * 0.06 + i * 0.08) % 1, 0.7, 0.62);
       mat.emissive.copy(tmp);
-      mat.emissiveIntensity = 1.6 + Math.sin(t * 2 + i) * 0.5;
+      mat.emissiveIntensity = 2.6 + Math.sin(t * 2 + i) * 0.8;
     });
   });
 
@@ -558,7 +559,7 @@ function GamingPC() {
         {fanPositions.map((f, i) => (
           <group key={i} position={f.p} rotation={f.r}>
             <mesh>
-              <torusGeometry args={[0.042, 0.008, 10, 32]} />
+              <torusGeometry args={[0.044, 0.01, 10, 32]} />
               <meshStandardMaterial ref={(m) => (fans.current[i] = m)} color="#ffffff" emissive="#a98bff" emissiveIntensity={1.6} />
             </mesh>
             <mesh>
@@ -570,7 +571,7 @@ function GamingPC() {
         {/* little figurine display box on top */}
         <Box size={[0.26, 0.12, 0.2]} position={[0, 0.55, -0.05]} color="#202020" roughness={0.3} />
       </group>
-      <pointLight position={[0, 0.25, 0.25]} color="#b68cff" intensity={0.6} distance={1.2} decay={2} />
+      <pointLight position={[0, 0.25, 0.3]} color="#b68cff" intensity={1.2} distance={1.4} decay={2} />
     </group>
   );
 }
@@ -615,7 +616,7 @@ function Nanoleaf({ palette, onCycle }) {
           </mesh>
           <mesh position-z={0.006}>
             <circleGeometry args={[r * 0.84, 3]} />
-            <meshStandardMaterial color={palette.color} emissive={palette.color} emissiveIntensity={1.4} toneMapped={false} />
+            <meshStandardMaterial color={palette.color} emissive={palette.color} emissiveIntensity={0.75} />
           </mesh>
         </group>
       ))}
@@ -624,7 +625,7 @@ function Nanoleaf({ palette, onCycle }) {
         <circleGeometry args={[0.035, 6]} />
         <meshStandardMaterial color="#2a2a2a" />
       </mesh>
-      <pointLight position={[0.65, -0.3, 0.35]} color={palette.light} intensity={1.6} distance={2.6} decay={2} />
+      <pointLight position={[0.65, -0.3, 0.35]} color={palette.light} intensity={0.7} distance={2.2} decay={2} />
     </group>
   );
 }
@@ -634,9 +635,17 @@ function Nanoleaf({ palette, onCycle }) {
 export default function WorkPlaceScene() {
   const textures = useScreenTextures();
   const [paletteIndex, setPaletteIndex] = useState(0);
+  const { size } = useThree();
+
+  // Pull the camera back on narrow / portrait screens so the whole room fits
+  const cameraTarget = useMemo(() => {
+    const aspect = size.width / size.height;
+    const pullBack = Math.max(1, DESKTOP_ASPECT / aspect);
+    return CAMERA_TARGET.clone().multiplyScalar(Math.min(pullBack, 2.4));
+  }, [size.width, size.height]);
 
   useFrame((state) => {
-    state.camera.position.lerp(CAMERA_TARGET, 0.05);
+    state.camera.position.lerp(cameraTarget, 0.05);
     state.camera.lookAt(0, -0.1, 0);
   });
 
