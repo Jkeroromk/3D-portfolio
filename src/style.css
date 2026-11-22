@@ -446,8 +446,12 @@ html[data-mode="macbook"] #root {
 }
 
 .room-ui--on.room-ui--focus {
-  opacity: 0.35;
+  opacity: 0;
   transition-delay: 0s;
+}
+
+.room-ui--on.room-ui--focus > * {
+  pointer-events: none;
 }
 
 .room-hint {
@@ -601,15 +605,18 @@ html[data-mode="macbook"] #root {
   animation: room-spin 0.8s linear infinite;
 }
 
-/* focus card */
+/* focus card: a bar along the bottom, so the object above it stays clear */
 .room-card {
   position: fixed;
-  left: 6vw;
-  top: 50%;
+  left: 50%;
+  bottom: 22px;
   z-index: 9999;
-  width: min(360px, 86vw);
+  width: min(1040px, calc(100vw - 44px));
   box-sizing: border-box;
-  padding: 24px 26px 20px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 18px 16px 24px;
   border-radius: 18px;
   background: rgba(14, 14, 18, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -617,37 +624,55 @@ html[data-mode="macbook"] #root {
   color: #fff;
   font-family: var(--ui-font);
   opacity: 0;
-  transform: translate(-16px, -50%);
+  transform: translate(-50%, 16px);
   pointer-events: none;
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 .room-card--open {
   opacity: 1;
-  transform: translate(0, -50%);
+  transform: translate(-50%, 0);
   pointer-events: auto;
   transition-delay: 0.6s;
 }
 
 .room-card h2 {
-  margin: 0 0 8px;
+  flex: none;
+  margin: 0;
   font-family: "Bangers", system-ui;
   font-weight: normal;
-  font-size: 34px;
+  font-size: 30px;
   letter-spacing: 1.5px;
+  white-space: nowrap;
 }
 
 .room-card p {
-  margin: 0 0 18px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.78);
 }
 
 .room-card__actions {
+  flex: none;
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .room-card {
+    bottom: 14px;
+    width: calc(100vw - 28px);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px 18px;
+  }
+  .room-card h2 {
+    font-size: 26px;
+  }
 }
 
 .room-card__link,
@@ -759,15 +784,6 @@ html[data-mode="macbook"] #root {
   }
   .room-hint {
     display: none;
-  }
-  .room-card {
-    left: 50%;
-    top: auto;
-    bottom: 104px;
-    transform: translate(-50%, 16px);
-  }
-  .room-card--open {
-    transform: translate(-50%, 0);
   }
 }
 

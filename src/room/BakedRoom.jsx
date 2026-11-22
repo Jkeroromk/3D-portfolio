@@ -745,16 +745,18 @@ const UP = new Vector3(0, 1, 0);
 const HALF_FOV = Math.tan((45 / 2) * (Math.PI / 180));
 
 // Focus shots were designed in Blender (clear line of sight, object framed).
-// On wide screens the info card sits on the left, so the shot is reframed to
-// fit the object's box into the free area right of the card: pulled back if
-// the object is too wide for that area, then aimed so it is centred there.
-function cardEdgeNdc(width) {
+// The info card is a bar along the bottom of the screen, so the shot is
+// reframed to fit the object's box into the free area above it: pulled back
+// if the object doesn't fit, then aimed so it is centred there.
+function cardTopNdc(height) {
   const el = typeof document !== "undefined" && document.querySelector(".room-card");
-  const right = el ? el.getBoundingClientRect().right + 16 : width * 0.06 + 360; // +16: its slide-in offset
-  return Math.min(0.2, ((right + 28) / width) * 2 - 1); // a little gap after the card
+  let top = el && el.childElementCount ? el.getBoundingClientRect().top : NaN;
+  if (el && el.classList && !el.classList.contains("room-card--open")) top -= 16; // its slide-in offset
+  if (!(top > 0)) top = height - (height < 700 ? 230 : 130); // not rendered yet: a typical bar
+  return Math.min(0.2, 1 - ((top - 20) / height) * 2); // a little gap above the bar
 }
 
-function focusPose(key, spot, aspect, pullBack, width) {
+function focusPose(key, spot, aspect, pullBack, height) {
   const cfg = HOTSPOTS[key];
   let pos;
   let look;
@@ -766,28 +768,27 @@ function focusPose(key, spot, aspect, pullBack, width) {
     look = spot.center.clone();
     pos = look.clone().addScaledVector(dir, (cfg.distance ?? spot.radius * 2.4 + 0.45) * pullBack);
   }
-  if (!(cfg.title && aspect > 1.2)) return { pos, target: look };
+  if (!cfg.title) return { pos, target: look };
 
   const fwd = look.clone().sub(pos).normalize();
   const right = fwd.clone().cross(UP).normalize();
   const up = right.clone().cross(fwd);
   const tanV = HALF_FOV;
   const tanH = HALF_FOV * aspect;
-  // free area in NDC: from just right of the card to the right edge
-  const left = cardEdgeNdc(width);
-  const halfFree = (1 - left) / 2;
-  const centre = left + halfFree;
+  // free area in NDC: from just above the bar to the top edge
+  const bottom = cardTopNdc(height);
+  const halfFree = (1 - bottom) / 2;
+  const centre = bottom + halfFree;
   // the object's half extents as seen by this camera
   const h = spot.half || new Vector3().setScalar(spot.radius * 0.6);
   const ext = (axis) => Math.abs(axis.x) * h.x + Math.abs(axis.y) * h.y + Math.abs(axis.z) * h.z;
-  const need =
-    Math.max(ext(right) / (tanH * halfFree * 0.82), ext(up) / (tanV * 0.8)) + ext(fwd);
+  const need = Math.max(ext(right) / (tanH * 0.82), ext(up) / (tanV * halfFree * 0.82)) + ext(fwd);
   // aim at the object's centre (the designed look point may be off to one side)
   const target = spot.center.clone();
   const d = Math.max(pos.distanceTo(look), need);
   pos = target.clone().addScaledVector(fwd, -d);
-  // turn the camera so the object lands in the middle of the free area
-  const aim = target.clone().addScaledVector(right, -centre * d * tanH);
+  // tilt the camera down so the object lands in the middle of the free area
+  const aim = target.clone().addScaledVector(up, -centre * d * tanV);
   return { pos, target: aim };
 }
 
@@ -906,23 +907,29 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (!saved.current && controls.current) {
         saved.current = { pos: camera.position.clone(), target: controls.current.target.clone() };
       }
-      const pose = focusPose(focus, spots[focus], size.width / size.height, pullBack, size.width);
-      setRoomState({ chairHidden: chairInTheWay(scene, pose) });
-      if (HOTSPOTS[focus].action === "macbook") {
-        // frame the MacBook, then push in close before the scene change
-        const close = {
-          pos: pose.target.clone().lerp(pose.pos, 0.35),
-          target: pose.target.clone(),
-        };
-        startTween(pose, 1.4, () => {
-          startTween(close, 0.9, () => {
-            saved.current = null;
-            onEnterMacbook && onEnterMacbook();
+      // wait a frame so the info bar has its new text and can be measured
+      const key = focus;
+      const id = requestAnimationFrame(() => {
+        if (getRoomState().focus !== key) return;
+        const pose = focusPose(key, spots[key], size.width / size.height, pullBack, size.height);
+        setRoomState({ chairHidden: chairInTheWay(scene, pose) });
+        if (HOTSPOTS[key].action === "macbook") {
+          // frame the MacBook, then push in close before the scene change
+          const close = {
+            pos: pose.target.clone().lerp(pose.pos, 0.35),
+            target: pose.target.clone(),
+          };
+          startTween(pose, 1.4, () => {
+            startTween(close, 0.9, () => {
+              saved.current = null;
+              onEnterMacbook && onEnterMacbook();
+            });
           });
-        });
-      } else {
-        startTween(pose, 1.3, () => {}, "zoom-in");
-      }
+        } else {
+          startTween(pose, 1.3, () => {}, "zoom-in");
+        }
+      });
+      return () => cancelAnimationFrame(id);
     } else if (!focus && saved.current) {
       hold.current = null;
       setRoomState({ chairHidden: false });
