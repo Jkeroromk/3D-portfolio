@@ -586,7 +586,7 @@ function Room({ manifest, onHotspot }) {
       room.baked.forEach((g) => textures.add(g.mat.uniforms.uDay.value));
       room.glows.forEach((g) => textures.add(g.mesh.material.uniforms.uDay.value));
       room.lit.forEach((l) => l.mat.map && textures.add(l.mat.map));
-      // props on the water (ducks, orbs) too
+      // props on the water (ducks) too
       rootScene.traverse((o) => {
         const m = o.material;
         if (!m || m.isShaderMaterial) return;
