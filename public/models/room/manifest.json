@@ -19,8 +19,15 @@
      0.422945,
      2.572327,
      10.907786
+    ],
+    "baseM": "night/Room_base_m.jpg",
+    "albedoM": "night/Room_albedo_m.jpg",
+    "layersM": [
+     "night/Room_layersA_m.jpg",
+     "night/Room_layersB_m.jpg"
     ]
-   }
+   },
+   "dayM": "bake/Room_day_m.jpg"
   },
   {
    "mesh": "Bake_Sofa",
@@ -40,8 +47,15 @@
      0.6736,
      0.37583,
      3.007483
+    ],
+    "baseM": "night/Sofa_base_m.jpg",
+    "albedoM": "night/Sofa_albedo_m.jpg",
+    "layersM": [
+     "night/Sofa_layersA_m.jpg",
+     "night/Sofa_layersB_m.jpg"
     ]
-   }
+   },
+   "dayM": "bake/Sofa_day_m.jpg"
   },
   {
    "mesh": "Bake_Decor",
@@ -61,8 +75,15 @@
      0.776032,
      5.126373,
      0.206934
+    ],
+    "baseM": "night/Decor_base_m.jpg",
+    "albedoM": "night/Decor_albedo_m.jpg",
+    "layersM": [
+     "night/Decor_layersA_m.jpg",
+     "night/Decor_layersB_m.jpg"
     ]
-   }
+   },
+   "dayM": "bake/Decor_day_m.jpg"
   },
   {
    "mesh": "Bake_Desk",
@@ -82,8 +103,15 @@
      0.013638,
      7.4249,
      0.030716
+    ],
+    "baseM": "night/Desk_base_m.jpg",
+    "albedoM": "night/Desk_albedo_m.jpg",
+    "layersM": [
+     "night/Desk_layersA_m.jpg",
+     "night/Desk_layersB_m.jpg"
     ]
-   }
+   },
+   "dayM": "bake/Desk_day_m.jpg"
   },
   {
    "mesh": "Bake_Speakers",
@@ -103,6 +131,12 @@
      0.005245,
      2.045987,
      0.002159
+    ],
+    "baseM": "night/Speakers_base_m.jpg",
+    "albedoM": "night/Speakers_albedo_m.jpg",
+    "layersM": [
+     "night/Speakers_layersA.jpg",
+     "night/Speakers_layersB.jpg"
     ]
    }
   },
@@ -124,8 +158,15 @@
      0.016129,
      0.198213,
      0.030463
+    ],
+    "baseM": "night/PC_base_m.jpg",
+    "albedoM": "night/PC_albedo_m.jpg",
+    "layersM": [
+     "night/PC_layersA_m.jpg",
+     "night/PC_layersB_m.jpg"
     ]
-   }
+   },
+   "dayM": "bake/PC_day_m.jpg"
   },
   {
    "mesh": "Bake_Shelf",
@@ -145,6 +186,12 @@
      0.006161,
      2.793492,
      0.00923
+    ],
+    "baseM": "night/Shelf_base_m.jpg",
+    "albedoM": "night/Shelf_albedo_m.jpg",
+    "layersM": [
+     "night/Shelf_layersA.jpg",
+     "night/Shelf_layersB.jpg"
     ]
    }
   },
@@ -166,6 +213,12 @@
      0.009806,
      0.192922,
      0.02232
+    ],
+    "baseM": "night/Lego_base_m.jpg",
+    "albedoM": "night/Lego_albedo_m.jpg",
+    "layersM": [
+     "night/Lego_layersA.jpg",
+     "night/Lego_layersB.jpg"
     ]
    }
   },
@@ -187,6 +240,12 @@
      0.023489,
      0.378947,
      0.021997
+    ],
+    "baseM": "night/Chair_base_m.jpg",
+    "albedoM": "night/Chair_albedo_m.jpg",
+    "layersM": [
+     "night/Chair_layersA.jpg",
+     "night/Chair_layersB.jpg"
     ]
    }
   },
@@ -219,6 +278,12 @@
      0.002276,
      0.111596,
      0.00279
+    ],
+    "baseM": "night/Fans_base_m.jpg",
+    "albedoM": "night/Fans_albedo_m.jpg",
+    "layersM": [
+     "night/Fans_layersA.jpg",
+     "night/Fans_layersB.jpg"
     ]
    }
   },
@@ -267,8 +332,15 @@
      0.258351,
      0.151255,
      0.001698
+    ],
+    "baseM": "night/Blanket_base_m.jpg",
+    "albedoM": "night/Blanket_albedo_m.jpg",
+    "layersM": [
+     "night/Blanket_layersA_m.jpg",
+     "night/Blanket_layersB_m.jpg"
     ]
-   }
+   },
+   "dayM": "bake/Blanket_day_m.jpg"
   },
   {
    "mesh": "Bake_Quest",
@@ -288,6 +360,33 @@
      0.371242,
      0.050316,
      0.035662
+    ],
+    "baseM": "night/Quest_base_m.jpg",
+    "albedoM": "night/Quest_albedo_m.jpg",
+    "layersM": [
+     "night/Quest_layersA.jpg",
+     "night/Quest_layersB.jpg"
+    ]
+   }
+  },
+  {
+   "mesh": "Bake_Plinth",
+   "day": "bake/Plinth_day.jpg",
+   "night": {
+    "base": "night/Plinth_base.jpg",
+    "albedo": "night/Plinth_albedo.jpg",
+    "layers": [
+     "night/Plinth_layersA.jpg",
+     "night/Plinth_layersB.jpg"
+    ],
+    "kBase": 0.009745,
+    "k": [
+     0.042651,
+     0.007267,
+     1.272624,
+     0.091242,
+     0.083152,
+     0.002674
     ]
    }
   }

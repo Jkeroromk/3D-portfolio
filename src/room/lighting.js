@@ -18,6 +18,8 @@ export const PRESETS = {
     night: 0,
     accent: "#ffc24d",
     bg: ["#e9e4dc", "#b9c3d1"],
+    sky: ["#6e98c9", "#dfe7ee"], // zenith, horizon
+    water: "#21455a",
     layers: {},
     nano: [c(1, 1, 1), c(1, 1, 1), c(1, 1, 1)],
   },
@@ -27,6 +29,8 @@ export const PRESETS = {
     night: 1,
     accent: "#b07bff",
     bg: ["#1d0f38", "#05030b"],
+    sky: ["#07040f", "#2b1652"], // zenith, horizon
+    water: "#0b0818",
     layers: {
       nano: [c(0.75, 0.4, 1.0), 1],
       deskwall: [c(0.35, 0.55, 1.0), 1],
@@ -43,6 +47,8 @@ export const PRESETS = {
     night: 1,
     accent: "#9fd4ff",
     bg: ["#132233", "#04080d"],
+    sky: ["#050a12", "#1a2e44"], // zenith, horizon
+    water: "#07101a",
     layers: {
       nano: [c(0.85, 0.92, 1.0), 0.45],
       deskwall: [c(0.85, 0.92, 1.0), 0.55],
@@ -59,6 +65,8 @@ export const PRESETS = {
     night: 1,
     accent: "#ff9a4d",
     bg: ["#2c1408", "#090403"],
+    sky: ["#0d0604", "#4a2414"], // zenith, horizon
+    water: "#120805",
     layers: {
       nano: [c(1.0, 0.5, 0.18), 0.9],
       deskwall: [c(1.0, 0.45, 0.15), 0.55],
@@ -75,13 +83,15 @@ export const PRESETS = {
     night: 1,
     accent: "#6b7bff",
     bg: ["#0b0c1c", "#010103"],
+    sky: ["#020204", "#121224"], // zenith, horizon
+    water: "#040408",
     layers: {
-      nano: [c(0.2, 0.25, 1.0), 0.18],
-      deskwall: [c(0.3, 0.35, 1.0), 0.35],
-      underdesk: [c(0.4, 0.3, 1.0), 0.15],
-      ceiling: [c(1, 1, 1), 0],
-      lamps: [c(1, 1, 1), 0],
-      sofa: [c(0.5, 0.25, 1.0), 0.4],
+      nano: [c(0.2, 0.25, 1.0), 0.4],
+      deskwall: [c(0.3, 0.35, 1.0), 0.65],
+      underdesk: [c(0.4, 0.3, 1.0), 0.4],
+      ceiling: [c(1.0, 0.8, 0.6), 0.06],
+      lamps: [c(1.0, 0.7, 0.42), 0.3],
+      sofa: [c(0.55, 0.3, 1.0), 1.0],
     },
     nano: [c(0.1, 0.12, 0.6), c(0.2, 0.15, 0.7), c(0.15, 0.3, 0.8)],
   },
@@ -108,6 +118,9 @@ function target(key) {
     nano: p.nano.map((s) => [...s]),
     nanoGain: p.layers.nano ? p.layers.nano[1] : 0,
     lampGain: p.layers.lamps ? p.layers.lamps[1] : 0,
+    skyTop: new Color(p.sky[0]),
+    skyHorizon: new Color(p.sky[1]),
+    water: new Color(p.water),
     bgTop: new Color(p.bg[0]),
     bgBottom: new Color(p.bg[1]),
     accent: new Color(p.accent),
@@ -121,6 +134,7 @@ live.intro = { day: 0, base: 0, layers: LAYER_NAMES.map(() => 0) };
 let goal = target("day");
 export function setPresetTarget(key) {
   goal = target(key);
+  live.changedAt = performance.now(); // the fade takes ~1.5 s
 }
 
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -132,7 +146,18 @@ export function stepLighting(dt) {
   live.nano.forEach((col, i) => col.forEach((v, j) => (col[j] = lerp(v, goal.nano[i][j], k))));
   live.nanoGain = lerp(live.nanoGain, goal.nanoGain, k);
   live.lampGain = lerp(live.lampGain, goal.lampGain, k);
+  live.skyTop.lerp(goal.skyTop, k);
+  live.skyHorizon.lerp(goal.skyHorizon, k);
+  live.water.lerp(goal.water, k);
   live.bgTop.lerp(goal.bgTop, k);
   live.bgBottom.lerp(goal.bgBottom, k);
   live.accent.lerp(goal.accent, k);
+}
+
+// colour at t (0..1) along a list of [r, g, b] stops
+export function sampleGradient(stops, t) {
+  const x = Math.min(Math.max(t, 0), 1) * (stops.length - 1);
+  const i = Math.min(Math.floor(x), stops.length - 2);
+  const f = x - i;
+  return stops[i].map((v, j) => v + (stops[i + 1][j] - v) * f);
 }

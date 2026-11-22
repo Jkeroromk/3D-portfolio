@@ -22,8 +22,13 @@ import {
   VideoTexture,
 } from "three";
 import { HOTSPOTS, ROOM_BASE } from "./roomConfig.js";
+import { MOBILE } from "./device.js";
+import RoomWorld, { REFLECT_LAYER, WATER_Y } from "./RoomWorld.jsx";
+import WaterLife from "./WaterLife.jsx";
+import RoomRenderer from "./RoomRenderer.jsx";
+import { renderFlags, REVEAL } from "./renderFlags.js";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
-import { LAYER_NAMES, live, setPresetTarget, stepLighting } from "./lighting.js";
+import { LAYER_NAMES, live, sampleGradient, setPresetTarget, stepLighting } from "./lighting.js";
 
 /*
  * Jason's room, modelled and lit in Blender with the lighting baked:
@@ -51,6 +56,56 @@ const CONTRAST = 0.55;
 // landing progress bar (drei useProgress) only counts what the first view needs.
 const lateManager = new LoadingManager();
 
+// Phones get half-resolution textures (4K -> 2K); when the visitor focuses on
+// something, just that group swaps to full resolution until they leave.
+const pick = (full, mobile) => (MOBILE && mobile) || full;
+
+// ImageBitmapLoader decodes JPGs off the main thread (TextureLoader decodes on
+// upload, which stalls a frame for every 4K texture)
+const bitmapLoader = new ImageBitmapLoader(lateManager);
+bitmapLoader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" });
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+function loadBitmapTexture(url, anisotropy) {
+  return new Promise((res) =>
+    bitmapLoader.load(
+      ROOM_BASE + url,
+      (bmp) => {
+        const t = new Texture(bmp);
+        t.needsUpdate = true;
+        res(prepTexture(t, anisotropy));
+      },
+      undefined,
+      () => res(null)
+    )
+  );
+}
+const idle = () =>
+  new Promise((r) => (window.requestIdleCallback ? window.requestIdleCallback(() => r(), { timeout: 250 }) : setTimeout(r, 30)));
+async function uploadTexture(gl, t) {
+  if (!t) return null;
+  await idle(); // upload in the browser's quiet moments
+  await nextFrame();
+  gl.initTexture(t);
+  return t;
+}
+function disposeTexture(t) {
+  if (!t) return;
+  t.dispose();
+  if (t.image && t.image.close) t.image.close();
+}
+
+// Point a group's material at its full-res textures (when focused on a phone)
+// or at the regular ones.
+function applyTextures(g) {
+  const u = g.mat.uniforms;
+  const hi = g.hi || {};
+  u.uDay.value = hi.day || g.lo.day;
+  if (g.lo.base) u.uBase.value = hi.base || g.lo.base;
+  if (g.lo.albedo) u.uAlbedo.value = hi.albedo || g.lo.albedo;
+  if (g.lo.la) u.uLA.value = hi.la || g.lo.la;
+  if (g.lo.lb) u.uLB.value = hi.lb || g.lo.lb;
+}
+
 function prepTexture(t, anisotropy = 8) {
   t.flipY = false; // glTF UV convention
   t.colorSpace = SRGBColorSpace;
@@ -62,9 +117,31 @@ function prepTexture(t, anisotropy = 8) {
 
 const vertex = /* glsl */ `
   varying vec2 vUv;
+  varying float vWorldY;
   void main() {
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vWorldY = (modelMatrix * vec4(position, 1.0)).y;
+    // same maths as three's built-in materials, so depth matches the pre-pass exactly
+    gl_Position = projectionMatrix * (modelViewMatrix * vec4(position, 1.0));
+  }
+`;
+
+// First appearance: a scan line sweeps up from the floor and "prints" the
+// room. Every room material shares these two uniforms.
+const REVEAL_EDGE = { value: new Vector3() }; // scan-line colour (preset accent)
+const REVEAL_FROM = WATER_Y - 0.05; // start at the waterline so the plinth prints too
+const REVEAL_TO = FLOOR_Y + 2.9;
+const REVEAL_TIME = 2.6;
+const revealChunk = /* glsl */ `
+  uniform float uReveal;
+  uniform vec3 uRevealEdge;
+  varying float vWorldY;
+  vec3 revealed(vec3 col) {
+    float d = uReveal - vWorldY;
+    if (d < 0.0) discard;
+    float line = exp(-d * 60.0);
+    float glow = exp(-d * 9.0) * 0.35;
+    return col + uRevealEdge * (line * 2.2 + glow);
   }
 `;
 
@@ -115,6 +192,7 @@ const bakedFragment = /* glsl */ `
   uniform float uContrast;
   uniform vec3 uCol[6];
   varying vec2 vUv;
+  ${revealChunk}
   ${agx}
   void main() {
     vec3 day = texture2D(uDay, vUv).rgb * uDayGain;
@@ -128,7 +206,7 @@ const bakedFragment = /* glsl */ `
       vec3 hdr = texture2D(uBase, vUv).rgb * uBaseK + albedo * light;
       col = mix(day, agx(hdr * uExposure), uNight);
     }
-    gl_FragColor = vec4(col, uOpacity);
+    gl_FragColor = vec4(revealed(col), uOpacity);
     #include <colorspace_fragment>
   }
 `;
@@ -141,10 +219,11 @@ const glowFragment = /* glsl */ `
   uniform float uContrast;
   uniform vec3 uGlow;
   varying vec2 vUv;
+  ${revealChunk}
   ${agx}
   void main() {
     vec3 day = texture2D(uDay, vUv).rgb * uDayGain;
-    gl_FragColor = vec4(mix(day, agx(uGlow), uNight), 1.0);
+    gl_FragColor = vec4(revealed(mix(day, agx(uGlow), uNight)), 1.0);
     #include <colorspace_fragment>
   }
 `;
@@ -156,6 +235,8 @@ function bakedMaterial(day, blank) {
     uAlbedo: { value: blank },
     uNight: { value: 0 },
     uOpacity: { value: 1 },
+    uReveal: REVEAL,
+    uRevealEdge: REVEAL_EDGE,
     uDayGain: { value: 0 },
     uBaseK: { value: 0 },
     uExposure: { value: EXPOSURE },
@@ -175,6 +256,8 @@ function glowMaterial(day) {
       uDayGain: { value: 0 },
       uContrast: { value: CONTRAST },
       uGlow: { value: new Vector3() },
+      uReveal: REVEAL,
+      uRevealEdge: REVEAL_EDGE,
     },
     vertexShader: vertex,
     fragmentShader: glowFragment,
@@ -204,21 +287,14 @@ function setCursor(v) {
 
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-function sampleGradient(stops, t) {
-  const x = Math.min(Math.max(t, 0), 1) * (stops.length - 1);
-  const i = Math.min(Math.floor(x), stops.length - 2);
-  const f = x - i;
-  return stops[i].map((v, j) => v + (stops[i + 1][j] - v) * f);
-}
-
 /* ---------- the room ---------- */
 
 function Room({ manifest, onHotspot }) {
-  const { gl } = useThree();
+  const { gl, scene: rootScene, camera } = useThree();
   const { scene } = useGLTF(ROOM_BASE + manifest.glb, true);
   const dayTextures = useLoader(
     TextureLoader,
-    manifest.bakes.map((b) => ROOM_BASE + b.day)
+    manifest.bakes.map((b) => ROOM_BASE + pick(b.day, b.dayM))
   );
   const [nightReady, setNightReady] = useState(false);
   const { preset } = useRoomState();
@@ -248,7 +324,7 @@ function Room({ manifest, onHotspot }) {
       }
       const mat = bakedMaterial(day, blank);
       meshes.forEach((m) => (m.material = mat));
-      baked.push({ mat, night: b.night });
+      baked.push({ mat, night: b.night, entry: b, lo: { day }, hi: null });
       if (b.mesh === "Bake_Chair") {
         // the chair can fade out when it stands between the camera and a focused object
         mat.transparent = true;
@@ -273,11 +349,13 @@ function Room({ manifest, onHotspot }) {
         map.flipY = false;
         map.colorSpace = SRGBColorSpace;
       } else {
-        map = prepTexture(new TextureLoader(lateManager).load(ROOM_BASE + s.image));
+        // frame photos live in Vercel Blob (full URL), not in the public repo
+        const src = /^https?:\/\//.test(s.image) ? s.image : ROOM_BASE + s.image;
+        map = prepTexture(new TextureLoader(lateManager).load(src));
       }
       const mat = new MeshBasicMaterial({ map, toneMapped: false });
       mesh.material = mat;
-      lit.push({ mat, day: s.day ?? 1, night: s.night ?? 1 });
+      lit.push({ mat, mesh, day: s.day ?? 1, night: s.night ?? 1, photo: !!s.mesh.startsWith("Photo_") });
     });
 
     (manifest.nightOnly || []).forEach((n) => {
@@ -341,12 +419,47 @@ function Room({ manifest, onHotspot }) {
         };
       });
 
-    // Centre the room on the origin with the floor at FLOOR_Y
+    // Only the room shell and the plinth show in the water (the reflection is
+    // seen from below the floor, so the furniture never appears in it)
+    ["Bake_Room", "Bake_Plinth"].forEach((n) => {
+      const o = scene.getObjectByName(n);
+      if (o) o.layers.enable(REFLECT_LAYER);
+    });
+
+    // Centre the room on the origin with the floor at FLOOR_Y (the plinth
+    // under the floor is left out so the framing stays the same)
+    const plinth = scene.getObjectByName("Bake_Plinth");
+    const plinthParent = plinth && plinth.parent;
+    if (plinth) plinthParent.remove(plinth);
     const bb = new Box3().setFromObject(scene);
+    if (plinth) plinthParent.add(plinth);
     const c = bb.getCenter(new Vector3());
     const offset = new Vector3(-c.x, FLOOR_Y - bb.min.y, -c.z);
 
-    const r = { baked, glows, lit, nightOnly, swivel, swivelRest, fans, hotspots, offset, chair, nightLoaded: false };
+    // transparent bits stay out of the depth pre-pass
+    nightOnly.forEach((n) => renderFlags.hideInPrepass.set(n.mesh, () => true));
+    if (chair) renderFlags.hideInPrepass.set(chair.mesh, () => chair.opacity < 0.98);
+
+    // lowest world point of the plain (non-shader) meshes, for the reveal sweep
+    const lowY = (mesh) => new Box3().setFromObject(mesh).min.y + offset.y;
+    lit.forEach((l) => (l.minY = lowY(l.mesh)));
+    nightOnly.forEach((n) => (n.minY = lowY(n.mesh)));
+
+    const r = {
+      baked,
+      glows,
+      lit,
+      nightOnly,
+      swivel,
+      swivelRest,
+      fans,
+      hotspots,
+      offset,
+      chair,
+      nightLoaded: false,
+      revealT: getRoomState().introPlayed ? REVEAL_TIME : 0,
+      warm: false,
+    };
     scene.userData.room = r;
     return r;
   }, [scene, manifest, dayTextures]);
@@ -368,11 +481,12 @@ function Room({ manifest, onHotspot }) {
     });
   }, [room]);
 
-  // Night textures: fetched only once a night mood is picked (or the intro has
-  // finished and the page is idle), then uploaded to the GPU one per frame so
-  // there is never a long freeze.
-  const { introPlayed } = useRoomState();
-  const wantNight = (preset && preset !== "day") || introPlayed;
+  // Night textures: fetched only once a night mood is picked (on desktop also
+  // once the intro has finished), then uploaded one per frame so there is never
+  // a long freeze.
+  const { introPlayed, focus, pending } = useRoomState();
+  const detailKey = pending || focus;
+  const wantNight = (preset && preset !== "day") || (!MOBILE && introPlayed);
   useEffect(() => {
     if (room.nightLoaded) {
       setNightReady(true);
@@ -380,44 +494,20 @@ function Room({ manifest, onHotspot }) {
     }
     if (!wantNight || room.nightLoading) return;
     room.nightLoading = true;
-    // ImageBitmapLoader decodes the JPGs off the main thread (TextureLoader
-    // decodes on upload, which stalls a frame for every 4K texture)
-    const loader = new ImageBitmapLoader(lateManager);
-    loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" });
-    const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
-    const load = (url) =>
-      new Promise((res) =>
-        loader.load(
-          ROOM_BASE + url,
-          (bmp) => {
-            const t = new Texture(bmp);
-            t.needsUpdate = true;
-            res(prepTexture(t, 4));
-          },
-          undefined,
-          () => res(null)
-        )
-      );
-    const upload = async (t) => {
-      if (!t) return null;
-      await nextFrame();
-      gl.initTexture(t);
-      return t;
-    };
     const delay = preset && preset !== "day" ? 0 : 1500;
     let fired = false;
     const id = setTimeout(async () => {
       fired = true;
-      for (const { mat, night } of room.baked) {
-        const tex = await Promise.all([night.base, night.albedo, ...night.layers].map(load));
+      for (const g of room.baked) {
+        const n = g.night;
+        const urls = [pick(n.base, n.baseM), pick(n.albedo, n.albedoM), ...(MOBILE && n.layersM ? n.layersM : n.layers)];
+        const tex = await Promise.all(urls.map((u) => loadBitmapTexture(u, 4)));
         const up = [];
-        for (const t of tex) up.push(await upload(t));
-        if (up[0]) mat.uniforms.uBase.value = up[0];
-        if (up[1]) mat.uniforms.uAlbedo.value = up[1];
-        if (up[2]) mat.uniforms.uLA.value = up[2];
-        if (up[3]) mat.uniforms.uLB.value = up[3];
-        mat.userData.kBase = night.kBase;
-        mat.userData.k = night.k;
+        for (const t of tex) up.push(await uploadTexture(gl, t));
+        Object.assign(g.lo, { base: up[0], albedo: up[1], la: up[2], lb: up[3] });
+        applyTextures(g);
+        g.mat.userData.kBase = n.kBase;
+        g.mat.userData.k = n.k;
       }
       room.nightLoaded = true;
       setNightReady(true);
@@ -428,13 +518,108 @@ function Room({ manifest, onHotspot }) {
     };
   }, [room, wantNight]);
 
+  // Phones: full-resolution textures only for the groups around the focused object
+  useEffect(() => {
+    if (!MOBILE) return;
+    const wanted = new Set(((detailKey && HOTSPOTS[detailKey]?.groups) || []).map((g) => "Bake_" + g));
+    // release groups we no longer look at
+    for (const g of room.baked) {
+      if (g.hi && !wanted.has(g.entry.mesh)) {
+        const old = g.hi;
+        g.hi = null;
+        applyTextures(g);
+        Object.values(old).forEach(disposeTexture);
+      }
+    }
+    let cancelled = false;
+    (async () => {
+      for (const g of room.baked) {
+        if (!wanted.has(g.entry.mesh) || g.hi || !g.entry.dayM) continue;
+        const n = g.night;
+        const jobs = { day: g.entry.day };
+        if (room.nightLoaded && n) {
+          if (n.baseM) jobs.base = n.base;
+          if (n.albedoM) jobs.albedo = n.albedo;
+          if (n.layersM && n.layersM[0] !== n.layers[0]) {
+            jobs.la = n.layers[0];
+            jobs.lb = n.layers[1];
+          }
+        }
+        const hi = {};
+        for (const [k, url] of Object.entries(jobs)) {
+          hi[k] = await uploadTexture(gl, await loadBitmapTexture(url, k === "day" ? 8 : 4));
+          if (cancelled) {
+            Object.values(hi).forEach(disposeTexture);
+            return;
+          }
+        }
+        g.hi = hi;
+        applyTextures(g);
+      }
+      // everything is on the GPU: now the camera can fly without hitches
+      if (!cancelled && pending && getRoomState().pending === pending) {
+        await nextFrame();
+        setRoomState({ focus: pending, pending: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [detailKey, room]);
+
   useEffect(() => {
     setPresetTarget(preset);
   }, [preset]);
 
+  // Warm-up before the room is shown: upload every texture (one per frame),
+  // compile the shaders, then wait for a few steady frames. Only then is the
+  // room "ready" and the reveal starts, so the print-out never stutters.
   useEffect(() => {
-    setRoomState({ ready: true });
-  }, []);
+    if (room.warm) {
+      setRoomState({ ready: true, warming: false });
+      return;
+    }
+    let alive = true;
+    (async () => {
+      setRoomState({ warming: true });
+      const textures = new Set();
+      room.baked.forEach((g) => textures.add(g.mat.uniforms.uDay.value));
+      room.glows.forEach((g) => textures.add(g.mesh.material.uniforms.uDay.value));
+      room.lit.forEach((l) => l.mat.map && textures.add(l.mat.map));
+      // props on the water (ducks) too
+      rootScene.traverse((o) => {
+        const m = o.material;
+        if (!m || m.isShaderMaterial) return;
+        ["map", "normalMap", "roughnessMap", "metalnessMap", "emissiveMap", "aoMap"].forEach((k) => m[k] && textures.add(m[k]));
+      });
+      for (const t of textures) {
+        if (!alive) return;
+        await nextFrame();
+        if (t && t.image && !t.isVideoTexture) gl.initTexture(t);
+      }
+      // opening in a night mood: have the night textures on the GPU before the
+      // print-out, so nothing uploads while it runs
+      while (alive && getRoomState().preset !== "day" && !room.nightLoaded) await nextFrame();
+      await nextFrame();
+      gl.compile(rootScene, camera);
+      let steady = 0;
+      let last = performance.now();
+      const t0 = last;
+      while (steady < 8 && performance.now() - t0 < 2500) {
+        await nextFrame();
+        const now = performance.now();
+        steady = now - last < 24 ? steady + 1 : 0;
+        last = now;
+      }
+      await new Promise((r) => setTimeout(r, 300)); // a short beat before the print-out
+      if (!alive) return;
+      room.warm = true;
+      setRoomState({ ready: true, warming: false });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [room]);
 
   useEffect(() => {
     const wantsNight = preset && preset !== "day";
@@ -448,6 +633,13 @@ function Room({ manifest, onHotspot }) {
     stepLighting(dt);
     const night = nightReady ? live.night : 0;
     const I = live.intro;
+
+    if (room.warm && room.revealT < REVEAL_TIME) room.revealT = Math.min(REVEAL_TIME, room.revealT + dt);
+    renderFlags.revealing = room.warm && room.revealT < REVEAL_TIME;
+    const rk = room.revealT / REVEAL_TIME;
+    const re = rk < 0.5 ? 4 * rk * rk * rk : 1 - Math.pow(-2 * rk + 2, 3) / 2;
+    REVEAL.value = rk >= 1 ? 10 : REVEAL_FROM + (REVEAL_TO - REVEAL_FROM) * re;
+    REVEAL_EDGE.value.set(live.accent.r, live.accent.g, live.accent.b).multiplyScalar(1 - Math.max(0, rk - 0.85) / 0.15);
 
     room.baked.forEach(({ mat }) => {
       const u = mat.uniforms;
@@ -474,18 +666,23 @@ function Room({ manifest, onHotspot }) {
       u.uGlow.value.copy(tmpC);
     });
 
-    room.lit.forEach(({ mat, day, night: n }) => {
-      const v = (day + (n - day) * night) * Math.max(I.day, I.base);
+    // how much light falls on the walls at night (ceiling spots + lamps)
+    const luma = (c) => 0.3 * c[0] + 0.55 * c[1] + 0.15 * c[2];
+    const wallLight = Math.min(1, 0.18 + 0.7 * (luma(live.layers[3]) + luma(live.layers[4])));
+    room.lit.forEach(({ mat, mesh, minY, day, night: n, photo }) => {
+      const nightV = photo ? n * wallLight : n; // photos aren't screens: they dim with the room
+      const v = (day + (nightV - day) * night) * Math.max(I.day, I.base);
       mat.color.setRGB(v, v, v);
+      mesh.visible = REVEAL.value > minY;
     });
 
-    room.nightOnly.forEach(({ mesh, layer }) => {
+    room.nightOnly.forEach(({ mesh, layer, minY }) => {
       const l = live.layers[layer] || [0, 0, 0];
       const m = Math.max(l[0], l[1], l[2], 1e-4);
       mesh.material.color.setRGB(l[0] / m, l[1] / m, l[2] / m);
       const a = night * Math.min(1, m) * (I.layers[layer] ?? 0);
       mesh.material.opacity = a;
-      mesh.visible = a > 0.01;
+      mesh.visible = a > 0.01 && REVEAL.value > minY;
     });
 
     room.fans.forEach((f) => f.pivot.rotateOnAxis(f.axis, f.speed * dt));
@@ -586,11 +783,16 @@ function chairInTheWay(scene, pose) {
   return !!hit && hit.distanceTo(pose.pos) < len;
 }
 
-// Pre-Enter framing: whole room on the right, landing text on the left
-function introPose(aspect, pullBack) {
+// Pre-Enter framing: whole room on the right, landing text on the left.
+// `swing` (0..1) moves the camera round and back for the arrival swing.
+function introPose(aspect, pullBack, swing = 0) {
   const target = TARGET.clone();
   if (aspect > 1.2) target.add(INTRO_SHIFT);
-  const sph = new Spherical(INTRO.distance * pullBack, INTRO.polar, INTRO.azimuth);
+  const sph = new Spherical(
+    INTRO.distance * pullBack * (1 + 0.55 * swing),
+    INTRO.polar - 0.22 * swing,
+    INTRO.azimuth - 1.1 * swing
+  );
   return { pos: new Vector3().setFromSpherical(sph).add(target), target };
 }
 
@@ -601,6 +803,13 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   useEffect(() => {
     scene.background = null;
   }, [scene]);
+
+  // previews only: expose the scene so it can be inspected from the console
+  useEffect(() => {
+    if (/-projects\.vercel\.app$/.test(window.location.hostname) || window.location.hostname === "localhost") {
+      window.__room = { scene, camera };
+    }
+  }, [scene, camera]);
   const controls = useRef();
   const { started, focus } = useRoomState();
   const tween = useRef(null);
@@ -613,9 +822,10 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   const pullBack = Math.min(Math.max(1, DESKTOP_ASPECT / (size.width / size.height)), 2.2);
   const home = useMemo(() => ({ pos: poseFromSpherical(HOME, pullBack), target: TARGET.clone() }), [pullBack]);
 
-  function startTween(to, duration, onDone) {
+  function startTween(to, duration, onDone, label = "tween") {
     const ctl = controls.current;
     tween.current = {
+      label,
       fromPos: camera.position.clone(),
       fromTarget: ctl ? ctl.target.clone() : TARGET.clone(),
       to,
@@ -642,17 +852,26 @@ export default function BakedRoomScene({ onEnterMacbook }) {
     I.day = PRE.day;
     I.base = PRE.base;
     I.layers.fill(PRE.layers);
-    const pose = introPose(size.width / size.height, pullBack);
+    // wait round the side until the room has loaded, then swing in with the reveal
+    const pose = introPose(size.width / size.height, pullBack, 1);
     camera.position.copy(pose.pos);
     camera.lookAt(pose.target);
     if (controls.current) controls.current.target.copy(pose.target);
   }, []);
 
+  const { ready } = useRoomState();
+  const swung = useRef(false);
+  useEffect(() => {
+    if (!ready || swung.current || getRoomState().introPlayed || getRoomState().started) return;
+    swung.current = true;
+    startTween(introPose(size.width / size.height, pullBack), REVEAL_TIME + 0.2, () => {}, "swing");
+  }, [ready]);
+
   // Enter: fly in, then switch the lights on one by one
   useEffect(() => {
     if (!started || introDone.current) return;
     introDone.current = true;
-    startTween(home, 3.4, () => setRoomState({ introPlayed: true }));
+    startTween(home, 3.4, () => setRoomState({ introPlayed: true }), "enter");
     lightIntro.current = 0;
   }, [started]);
 
@@ -678,23 +897,23 @@ export default function BakedRoomScene({ onEnterMacbook }) {
           });
         });
       } else {
-        startTween(pose, 1.3, () => {});
+        startTween(pose, 1.3, () => {}, "zoom-in");
       }
     } else if (!focus && saved.current) {
       hold.current = null;
       setRoomState({ chairHidden: false });
-      startTween(saved.current, 1.2, () => {});
+      startTween(saved.current, 1.2, () => {}, "zoom-out");
       saved.current = null;
     }
   }, [focus]);
 
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && setRoomState({ focus: null });
+    const onKey = (e) => e.key === "Escape" && setRoomState({ focus: null, pending: null });
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
       setCursor("auto");
-      setRoomState({ ready: false, focus: null, hover: null, chairHidden: false });
+      setRoomState({ ready: false, focus: null, pending: null, hover: null, chairHidden: false });
     };
   }, []);
 
@@ -725,6 +944,15 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (ctl) ctl.target.copy(hold.current.target);
     }
     if (ctl) ctl.enabled = !tween.current && !st.focus && st.started;
+    renderFlags.phase = !st.ready
+      ? "loading"
+      : renderFlags.revealing
+      ? "print"
+      : tween.current
+      ? tween.current.label
+      : st.focus
+      ? "focused"
+      : "idle";
 
     // intro lights: day fades in; at night each layer switches on in turn
     const I = live.intro;
@@ -745,7 +973,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
   const onHotspot = (key) => {
     const cfg = HOTSPOTS[key];
     const st = getRoomState();
-    if (!cfg || !st.started || st.focus) return;
+    if (!cfg || !st.started || st.focus || st.pending) return;
     if (cfg.action === "lights") {
       setRoomState({ deckPulse: Date.now() });
       return;
@@ -754,8 +982,13 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       setRoomState({ cyclePreset: Date.now() });
       return;
     }
-    setRoomState({ focus: key, hover: null });
     setCursor("auto");
+    // Phones: fetch the full-res textures first (a spinner shows), fly once they're in
+    if (MOBILE && cfg.title && cfg.groups) {
+      setRoomState({ pending: key, hover: null });
+      return;
+    }
+    setRoomState({ focus: key, hover: null });
   };
 
   return (
@@ -768,13 +1001,16 @@ export default function BakedRoomScene({ onEnterMacbook }) {
         enableDamping
         dampingFactor={0.08}
         minDistance={2}
-        maxDistance={started ? 7 * pullBack : 40}
+        maxDistance={started ? 10 * pullBack : 40}
         minPolarAngle={0.45}
         maxPolarAngle={1.35}
         minAzimuthAngle={-1.45}
         maxAzimuthAngle={0.05}
         rotateSpeed={0.5}
       />
+      <RoomRenderer />
+      <RoomWorld />
+      <WaterLife />
       <Suspense fallback={null}>{manifest && <Room manifest={manifest} onHotspot={onHotspot} />}</Suspense>
     </>
   );
