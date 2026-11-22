@@ -103,3 +103,19 @@ export const CREDITS = [
     ],
   },
 ];
+
+/*
+ * Background music. Add tracks here and they show up in the music button at
+ * the bottom left (it stays hidden on the live site while the list is empty).
+ *  - src: a file in public/audio/ (e.g. "/audio/my-song.mp3"), or a full URL
+ *    (Vercel Blob or anywhere that serves the file with CORS).
+ *  - startOnEnter: start playing when the visitor presses Enter (browsers only
+ *    allow sound after a click). A visitor who pauses it stays paused next time.
+ */
+export const BGM = {
+  volume: 0.35,
+  startOnEnter: true,
+  tracks: [
+    // { title: "Song name", artist: "Artist", src: "/audio/song.mp3" },
+  ],
+};

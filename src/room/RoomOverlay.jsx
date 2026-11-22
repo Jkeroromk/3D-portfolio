@@ -1,6 +1,7 @@
 import { useProgress } from "@react-three/drei";
 import { useEffect, useRef, useState } from "react";
 import { CREDITS, HOTSPOTS } from "./roomConfig.js";
+import { next as nextTrack, startOnEnter, toggle as toggleMusic, trackInfo, useBgm } from "./bgm.js";
 import { getRoomState, setRoomState, useRoomState } from "./roomStore.js";
 import { live, PRESETS, PRESET_ORDER } from "./lighting.js";
 
@@ -82,7 +83,11 @@ function Landing() {
           <span>{status}</span>
           <span>{pct}%</span>
         </div>
-        <button className="room-landing__enter" disabled={!ready} onClick={() => setRoomState({ started: true })}>
+        <button className="room-landing__enter" disabled={!ready} onClick={() => {
+            setRoomState({ started: true });
+            startOnEnter();
+          }}
+        >
           {ready ? "Enter" : "Loading…"}
         </button>
       </div>
@@ -196,6 +201,52 @@ function FocusCard() {
   );
 }
 
+// previews show the music button even before any tracks are added
+const IS_PREVIEW = /-projects\.vercel\.app$|^localhost$/.test(window.location.hostname);
+
+function MusicButton() {
+  const { playing, index, count } = useBgm();
+  if (!count && !IS_PREVIEW) return null;
+  const t = trackInfo(index);
+  return (
+    <div className={`bgm ${playing ? "bgm--on" : ""}`}>
+      <button
+        className="bgm__play"
+        onClick={toggleMusic}
+        disabled={!count}
+        aria-label={playing ? "Pause music" : "Play music"}
+        title={playing ? "Pause music" : "Play music"}
+      >
+        {playing ? (
+          <span className="bgm__bars" aria-hidden>
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        ) : (
+          <span aria-hidden>♪</span>
+        )}
+      </button>
+      <div className="bgm__info">
+        {t ? (
+          <>
+            <span className="bgm__title">{t.title}</span>
+            {t.artist && <span className="bgm__artist">{t.artist}</span>}
+          </>
+        ) : (
+          <span className="bgm__title">No tracks yet</span>
+        )}
+      </div>
+      {count > 1 && (
+        <button className="bgm__next" onClick={() => nextTrack()} aria-label="Next song" title="Next song">
+          ⏭
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Credits() {
   const { credits } = useRoomState();
   if (!credits) return null;
@@ -254,9 +305,12 @@ export default function RoomOverlay() {
       <div className={`room-ui ${started ? "room-ui--on" : ""} ${focus ? "room-ui--focus" : ""}`}>
         <div className="room-hint">Drag to look around · click things to explore</div>
         <StreamDeck />
-        <button className="room-credits-link" onClick={() => setRoomState({ credits: true })}>
-          Credits
-        </button>
+        <div className="room-corner">
+          <button className="room-credits-link" onClick={() => setRoomState({ credits: true })}>
+            Credits
+          </button>
+          <MusicButton />
+        </div>
       </div>
       <HoverLabel />
       <FocusCard />
