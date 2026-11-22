@@ -781,7 +781,7 @@ function focusPose(key, spot, aspect, pullBack, width) {
   const h = spot.half || new Vector3().setScalar(spot.radius * 0.6);
   const ext = (axis) => Math.abs(axis.x) * h.x + Math.abs(axis.y) * h.y + Math.abs(axis.z) * h.z;
   const need =
-    Math.max(ext(right) / (tanH * halfFree * 0.9), ext(up) / (tanV * 0.85)) + ext(fwd);
+    Math.max(ext(right) / (tanH * halfFree * 0.82), ext(up) / (tanV * 0.8)) + ext(fwd);
   // aim at the object's centre (the designed look point may be off to one side)
   const target = spot.center.clone();
   const d = Math.max(pos.distanceTo(look), need);
