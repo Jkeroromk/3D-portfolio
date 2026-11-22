@@ -414,6 +414,7 @@ function Room({ manifest, onHotspot }) {
           box,
           center,
           radius: size.length() / 2,
+          half: size.clone().multiplyScalar(0.5),
           cam: h.cam ? new Vector3().fromArray(h.cam) : null,
           look: h.look ? new Vector3().fromArray(h.look) : null,
         };
@@ -473,6 +474,7 @@ function Room({ manifest, onHotspot }) {
           {
             center: h.center.clone().add(room.offset),
             radius: h.radius,
+            half: h.half,
             cam: h.cam && h.cam.clone().add(room.offset),
             look: h.look && h.look.clone().add(room.offset),
           },
@@ -743,9 +745,16 @@ const UP = new Vector3(0, 1, 0);
 const HALF_FOV = Math.tan((45 / 2) * (Math.PI / 180));
 
 // Focus shots were designed in Blender (clear line of sight, object framed).
-// On wide screens the object is pushed right of centre so the info card on the
-// left doesn't cover it.
-function focusPose(key, spot, aspect, pullBack) {
+// On wide screens the info card sits on the left, so the shot is reframed to
+// fit the object's box into the free area right of the card: pulled back if
+// the object is too wide for that area, then aimed so it is centred there.
+function cardEdgeNdc(width) {
+  const el = typeof document !== "undefined" && document.querySelector(".room-card");
+  const right = el ? el.getBoundingClientRect().right + 16 : width * 0.06 + 360; // +16: its slide-in offset
+  return Math.min(0.2, ((right + 28) / width) * 2 - 1); // a little gap after the card
+}
+
+function focusPose(key, spot, aspect, pullBack, width) {
   const cfg = HOTSPOTS[key];
   let pos;
   let look;
@@ -757,14 +766,29 @@ function focusPose(key, spot, aspect, pullBack) {
     look = spot.center.clone();
     pos = look.clone().addScaledVector(dir, (cfg.distance ?? spot.radius * 2.4 + 0.45) * pullBack);
   }
-  const shift = cfg.title && aspect > 1.2 ? cfg.shift ?? 0.28 : 0;
-  if (shift) {
-    const fwd = look.clone().sub(pos);
-    const d = fwd.length();
-    const right = fwd.normalize().cross(UP).normalize();
-    look.addScaledVector(right, -shift * d * HALF_FOV * aspect);
-  }
-  return { pos, target: look };
+  if (!(cfg.title && aspect > 1.2)) return { pos, target: look };
+
+  const fwd = look.clone().sub(pos).normalize();
+  const right = fwd.clone().cross(UP).normalize();
+  const up = right.clone().cross(fwd);
+  const tanV = HALF_FOV;
+  const tanH = HALF_FOV * aspect;
+  // free area in NDC: from just right of the card to the right edge
+  const left = cardEdgeNdc(width);
+  const halfFree = (1 - left) / 2;
+  const centre = left + halfFree;
+  // the object's half extents as seen by this camera
+  const h = spot.half || new Vector3().setScalar(spot.radius * 0.6);
+  const ext = (axis) => Math.abs(axis.x) * h.x + Math.abs(axis.y) * h.y + Math.abs(axis.z) * h.z;
+  const need =
+    Math.max(ext(right) / (tanH * halfFree * 0.9), ext(up) / (tanV * 0.85)) + ext(fwd);
+  // aim at the object's centre (the designed look point may be off to one side)
+  const target = spot.center.clone();
+  const d = Math.max(pos.distanceTo(look), need);
+  pos = target.clone().addScaledVector(fwd, -d);
+  // turn the camera so the object lands in the middle of the free area
+  const aim = target.clone().addScaledVector(right, -centre * d * tanH);
+  return { pos, target: aim };
 }
 
 // Is the (swivelling) chair between the camera and what it looks at? The chair
@@ -882,7 +906,7 @@ export default function BakedRoomScene({ onEnterMacbook }) {
       if (!saved.current && controls.current) {
         saved.current = { pos: camera.position.clone(), target: controls.current.target.clone() };
       }
-      const pose = focusPose(focus, spots[focus], size.width / size.height, pullBack);
+      const pose = focusPose(focus, spots[focus], size.width / size.height, pullBack, size.width);
       setRoomState({ chairHidden: chairInTheWay(scene, pose) });
       if (HOTSPOTS[focus].action === "macbook") {
         // frame the MacBook, then push in close before the scene change
