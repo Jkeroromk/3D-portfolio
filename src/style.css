@@ -734,11 +734,17 @@ html[data-mode="macbook"] #root {
   pointer-events: auto;
 }
 
-.room-credits-link {
+.room-corner {
   position: fixed;
   left: 20px;
   bottom: 18px;
   z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.room-credits-link {
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(12, 12, 16, 0.55);
   color: rgba(255, 255, 255, 0.85);
@@ -753,6 +759,126 @@ html[data-mode="macbook"] #root {
 
 .room-credits-link:hover {
   background: rgba(12, 12, 16, 0.85);
+}
+
+/* background music */
+.bgm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 260px;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(12, 12, 16, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+  font: 11px var(--ui-font);
+}
+
+.bgm__play,
+.bgm__next {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.bgm__play {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #0c0d11;
+  font-size: 13px;
+  transition: transform 0.15s ease;
+}
+
+.bgm__play:hover {
+  transform: scale(1.08);
+}
+
+.bgm__play:disabled {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: default;
+  transform: none;
+}
+
+.bgm__next {
+  background: transparent;
+  font-size: 12px;
+  opacity: 0.7;
+  padding: 0 2px;
+}
+
+.bgm__next:hover {
+  opacity: 1;
+}
+
+.bgm__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.bgm__title,
+.bgm__artist {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bgm__title {
+  letter-spacing: 0.5px;
+}
+
+.bgm__artist {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.bgm__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.bgm__bars i {
+  width: 2px;
+  height: 100%;
+  background: currentColor;
+  border-radius: 1px;
+  animation: bgm-bar 0.9s ease-in-out infinite;
+}
+
+.bgm__bars i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.bgm__bars i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+
+.bgm__bars i:nth-child(4) {
+  animation-delay: -0.15s;
+}
+
+@keyframes bgm-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.bgm__bars i {
+  transform-origin: bottom;
 }
 
 @media (max-width: 720px) {
@@ -777,7 +903,7 @@ html[data-mode="macbook"] #root {
   .deck__key {
     height: 54px;
   }
-  .room-credits-link {
+  .room-corner {
     bottom: auto;
     top: 18px;
     left: 18px;
