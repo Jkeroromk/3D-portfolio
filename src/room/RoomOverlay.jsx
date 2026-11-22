@@ -171,16 +171,19 @@ function FocusCard() {
     if (cfg && cfg.title) setShown(cfg);
   }, [focus]);
   const open = !!(cfg && cfg.title);
+  // the new text renders right away (the camera measures the bar), the old
+  // text stays while it fades out
+  const content = open ? cfg : shown;
   return (
     <div className={`room-card ${open ? "room-card--open" : ""}`} aria-hidden={!open}>
-      {shown && (
+      {content && (
         <>
-          <h2>{shown.title}</h2>
-          <p>{shown.body}</p>
+          <h2>{content.title}</h2>
+          <p>{content.body}</p>
           <div className="room-card__actions">
-            {shown.link && (
-              <a className="room-card__link" href={shown.link.url} target="_blank" rel="noopener noreferrer">
-                {shown.link.text} ↗
+            {content.link && (
+              <a className="room-card__link" href={content.link.url} target="_blank" rel="noopener noreferrer">
+                {content.link.text} ↗
               </a>
             )}
             <button className="room-card__back" onClick={() => setRoomState({ focus: null })}>
